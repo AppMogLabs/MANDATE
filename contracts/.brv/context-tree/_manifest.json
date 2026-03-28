@@ -1,0 +1,91 @@
+{
+  "active_context": [
+    {
+      "order": 3,
+      "path": "_index.md",
+      "tokens": 806,
+      "type": "summary"
+    },
+    {
+      "order": 2,
+      "path": "development/_index.md",
+      "tokens": 765,
+      "type": "summary"
+    },
+    {
+      "order": 2,
+      "path": "project_management/_index.md",
+      "tokens": 199,
+      "type": "summary"
+    },
+    {
+      "order": 1,
+      "path": "project_management/sprints/_index.md",
+      "tokens": 216,
+      "type": "summary"
+    },
+    {
+      "importance": 50,
+      "path": "development/context.md",
+      "tokens": 84,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "development/deployment/context.md",
+      "tokens": 68,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "development/deployment/s6_3_create2_deployment.md",
+      "tokens": 468,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "development/sprints/context.md",
+      "tokens": 51,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "development/sprints/sprint_3_eventoracle.md",
+      "tokens": 399,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "development/sprints/sprint_5_reputationledger.md",
+      "tokens": 425,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "project_management/context.md",
+      "tokens": 71,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "project_management/sprints/context.md",
+      "tokens": 41,
+      "type": "context"
+    },
+    {
+      "importance": 50,
+      "path": "project_management/sprints/mapregistry_sprint_1.md",
+      "tokens": 322,
+      "type": "context"
+    }
+  ],
+  "generated_at": "2026-03-22T17:46:02.796Z",
+  "lane_tokens": {
+    "contexts": 1929,
+    "stubs": 0,
+    "summaries": 1986
+  },
+  "source_fingerprint": "a4ef564fbfec941183581199e1a473062d3d45cfff7abb07c2f40d084f4e8f38",
+  "total_tokens": 3915,
+  "version": 1
+}

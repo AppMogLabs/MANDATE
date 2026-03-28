@@ -1,0 +1,23 @@
+{
+  "name": "@mandate/agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "register": "bun run src/scripts/register.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "viem": "^2.21.0",
+    "@mandate/schema": "workspace:*",
+    "@mandate/guard": "workspace:*",
+    "@mandate/sanitiser": "workspace:*",
+    "@mandate/context-builder": "workspace:*",
+    "@mandate/negotiation-messages": "workspace:*",
+    "@mandate/state-indexer": "workspace:*",
+    "@mandate/echo-simulator": "workspace:*",
+    "@mandate/clause-parser": "workspace:*",
+    "@mandate/reflex-preapproval": "workspace:*"
+  }
+}

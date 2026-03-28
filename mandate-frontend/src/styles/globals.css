@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+@theme {
+  /* === Core === */
+  --color-night-sky: #19191A;
+  --color-moon-white: #ECE8E8;
+
+  /* === Surface Elevation === */
+  --color-surface-0: #19191A;
+  --color-surface-1: #1F1F20;
+  --color-surface-2: #252526;
+  --color-surface-3: #2C2C2D;
+  --color-surface-hover: #333334;
+
+  /* === Text Hierarchy === */
+  --color-text-primary: #ECE8E8;
+  --color-text-secondary: #A8A4A4;
+  --color-text-tertiary: #6B6868;
+  --color-text-inverse: #19191A;
+
+  /* === Brand === */
+  --color-full-moon: #DFD9D9;
+
+  /* === Resource Accents === */
+  --color-compute: #7EAAD4;
+  --color-energy: #F5AF94;
+  --color-chips: #F5949D;
+  --color-cooling: #70BAD2;
+  --color-talent: #F786C6;
+  --color-data: #90D79F;
+  --color-clearance: #6DD0A9;
+  --color-rate: #ECE8E8;
+
+  /* === Status === */
+  --color-status-critical: #F5949D;
+  --color-status-warning: #F5AF94;
+  --color-status-info: #6B6868;
+  --color-status-success: #90D79F;
+
+  /* === Interactive === */
+  --color-border-default: #333334;
+  --color-border-focus: #7EAAD4;
+  --color-border-active: #ECE8E8;
+
+  /* === Typography Scale === */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+
+  /* === Spacing === */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+
+  /* === Font Families === */
+  --font-dashboard: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-terminal: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+}
+
+:root {
+  /* === Core === */
+  --night-sky: #19191A;
+  --moon-white: #ECE8E8;
+
+  /* === Surface Elevation === */
+  --surface-0: #19191A;
+  --surface-1: #1F1F20;
+  --surface-2: #252526;
+  --surface-3: #2C2C2D;
+  --surface-hover: #333334;
+
+  /* === Text Hierarchy === */
+  --text-primary: #ECE8E8;
+  --text-secondary: #A8A4A4;
+  --text-tertiary: #6B6868;
+  --text-inverse: #19191A;
+
+  /* === Brand === */
+  --full-moon: #DFD9D9;
+
+  /* === Resource Accents === */
+  --colour-compute: #7EAAD4;
+  --colour-energy: #F5AF94;
+  --colour-chips: #F5949D;
+  --colour-cooling: #70BAD2;
+  --colour-talent: #F786C6;
+  --colour-data: #90D79F;
+  --colour-clearance: #6DD0A9;
+  --colour-rate: #ECE8E8;
+
+  /* === Status === */
+  --status-critical: #F5949D;
+  --status-warning: #F5AF94;
+  --status-info: #6B6868;
+  --status-success: #90D79F;
+
+  /* === Interactive === */
+  --border-default: #333334;
+  --border-focus: #7EAAD4;
+  --border-active: #ECE8E8;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  background-color: var(--night-sky);
+  color: var(--text-primary);
+  font-family: var(--font-dashboard);
+  font-size: var(--text-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* === Font Register Utilities === */
+.font-dashboard {
+  font-family: var(--font-dashboard);
+}
+
+.font-terminal {
+  font-family: var(--font-terminal);
+}
+
+/* === Tabular Nums (critical for all numerical columns) === */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* === Scrollbar Styling === */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-0);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-hover);
+}
+
+/* === Selection === */
+::selection {
+  background-color: var(--colour-compute);
+  color: var(--text-inverse);
+}

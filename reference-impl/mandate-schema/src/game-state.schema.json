@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mandate.game/schemas/game-state.json",
+  "title": "GameState",
+  "description": "MANDATE Layer 3 machine context — on-chain game state snapshot",
+  "type": "object",
+  "required": ["agentId", "role", "currentBalances", "blockNumber", "timestamp"],
+  "additionalProperties": false,
+  "properties": {
+    "agentId": {
+      "type": "integer",
+      "description": "On-chain agent NFT token ID"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["ComputeSuperpower", "DataRichState", "ChipPower", "TalentHub", "RegulatoryPower"],
+      "description": "Agent archetype role"
+    },
+    "currentBalances": {
+      "type": "object",
+      "description": "Current token balances",
+      "required": ["RATE", "COMPUTE", "CHIPS", "DATA", "ENERGY", "TALENT", "COOLING", "CLEARANCE"],
+      "additionalProperties": false,
+      "properties": {
+        "RATE": { "type": "number" },
+        "COMPUTE": { "type": "number" },
+        "CHIPS": { "type": "number" },
+        "DATA": { "type": "number" },
+        "ENERGY": { "type": "number" },
+        "TALENT": { "type": "number" },
+        "COOLING": { "type": "number" },
+        "CLEARANCE": { "type": "number" }
+      }
+    },
+    "buildingPortfolio": {
+      "type": "array",
+      "description": "Buildings owned by this agent",
+      "items": {
+        "type": "object",
+        "required": ["buildingId", "type", "tier", "tileX", "tileY", "productionRate"],
+        "additionalProperties": false,
+        "properties": {
+          "buildingId": { "type": "integer" },
+          "type": { "type": "string" },
+          "tier": { "type": "integer", "minimum": 1, "maximum": 3 },
+          "tileX": { "type": "integer" },
+          "tileY": { "type": "integer" },
+          "productionRate": { "type": "number" }
+        }
+      }
+    },
+    "reputationScore": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000,
+      "description": "Agent reputation score"
+    },
+    "activeCommitments": {
+      "type": "object",
+      "description": "Active on-chain commitments",
+      "additionalProperties": false,
+      "properties": {
+        "openOrders": { "type": "integer" },
+        "pendingSettlements": { "type": "integer" },
+        "activeInsurance": { "type": "integer" },
+        "activePredictions": { "type": "integer" }
+      }
+    },
+    "epochProgress": {
+      "type": "object",
+      "description": "Current epoch timing info",
+      "additionalProperties": false,
+      "properties": {
+        "currentEpoch": { "type": "integer" },
+        "timeRemaining": { "type": "integer" },
+        "agiProgressScore": { "type": "number" }
+      }
+    },
+    "marketSnapshot": {
+      "type": "object",
+      "description": "Current market data per resource",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(COMPUTE|CHIPS|DATA|ENERGY|TALENT|COOLING|CLEARANCE)$": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "twapPrice": { "type": "number" },
+            "bookDepth": { "type": "integer" },
+            "recentVolume": { "type": "number" }
+          }
+        }
+      }
+    },
+    "intelligenceSubscriptions": {
+      "type": "object",
+      "description": "Intelligence tier subscription",
+      "additionalProperties": false,
+      "properties": {
+        "tier": { "type": "string", "enum": ["free", "analyst", "premium"] }
+      }
+    },
+    "activeClauses": {
+      "type": "array",
+      "description": "Active contract clauses",
+      "items": {
+        "type": "object",
+        "required": ["clauseId", "condition", "verified"],
+        "additionalProperties": false,
+        "properties": {
+          "clauseId": { "type": "integer" },
+          "condition": { "type": "string" },
+          "verified": { "type": "boolean" }
+        }
+      }
+    },
+    "blockNumber": {
+      "type": "integer",
+      "description": "Block number of this snapshot"
+    },
+    "timestamp": {
+      "type": "integer",
+      "description": "Unix timestamp of this snapshot"
+    }
+  }
+}

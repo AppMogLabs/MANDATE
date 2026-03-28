@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+.bun/
+
+# Build artifacts
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+dist/
+.next/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Strategic & internal docs (not project code)
+Strategic_Docs/
+Hackathon/
+Phase 3/
+Sprint1/
+Sprint2/
+Sprint3/
+Sprint4/
+Sprint5/
+Sprint6/
+SPRINT1-6_EXECUTION_PLAN.md
+DAY3_BRIEF.md
+DAY3_HANDOFF.md
+PHASE2_COMPLETION_HANDOFF.md
+PHASE2_COMPLETION_REPORT.md
+CLAUDE_HANDOFF.md
+SECURITY_AUDIT_REPORT_PHASE4.md
+DIMENSIONAL_SCOPE.json
+DIMENSIONAL_UNITS.md
+
+# Logs
+logs/
+*.log
+
+# Lock files (keep bun.lock)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

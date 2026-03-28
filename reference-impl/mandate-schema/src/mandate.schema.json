@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mandate.game/schemas/mandate.json",
+  "title": "Mandate",
+  "description": "MANDATE Layer 1 (Strategic Intent) + Layer 2 (Tactical Parameters) schema",
+  "type": "object",
+  "required": ["strategicIntent"],
+  "additionalProperties": false,
+  "properties": {
+    "strategicIntent": {
+      "type": "string",
+      "maxLength": 4096,
+      "description": "Natural language strategic directive from the human owner"
+    },
+    "resourceBudgets": {
+      "type": "object",
+      "description": "Maximum resource allocation limits",
+      "additionalProperties": false,
+      "properties": {
+        "COMPUTE": { "type": "integer", "minimum": 0 },
+        "CHIPS": { "type": "integer", "minimum": 0 },
+        "DATA": { "type": "integer", "minimum": 0 },
+        "ENERGY": { "type": "integer", "minimum": 0 },
+        "TALENT": { "type": "integer", "minimum": 0 },
+        "COOLING": { "type": "integer", "minimum": 0 },
+        "CLEARANCE": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "priceThresholds": {
+      "type": "object",
+      "description": "Price limits per resource for buy/sell operations",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(COMPUTE|CHIPS|DATA|ENERGY|TALENT|COOLING|CLEARANCE)$": {
+          "type": "object",
+          "required": ["maxBuy", "minSell"],
+          "additionalProperties": false,
+          "properties": {
+            "maxBuy": { "type": "number", "minimum": 0 },
+            "minSell": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "counterpartyPreferences": {
+      "type": "object",
+      "description": "Agent relationship preferences",
+      "additionalProperties": false,
+      "properties": {
+        "prefer": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "avoid": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "block": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "riskLimits": {
+      "type": "object",
+      "description": "Risk management constraints",
+      "additionalProperties": false,
+      "properties": {
+        "maxResourceConcentration": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "maxDealExposure": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "maxOpenNegotiations": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "tacticalDirectives": {
+      "type": "array",
+      "description": "Conditional action rules",
+      "items": {
+        "type": "object",
+        "required": ["condition", "action", "priority"],
+        "additionalProperties": false,
+        "properties": {
+          "condition": { "type": "string" },
+          "action": { "type": "string" },
+          "priority": { "type": "string", "enum": ["low", "medium", "high"] }
+        }
+      }
+    },
+    "timeHorizon": {
+      "type": "object",
+      "description": "Time scope for the mandate",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["epoch", "duration", "indefinite"] },
+        "value": { "type": "number" }
+      },
+      "if": {
+        "properties": { "type": { "const": "duration" } }
+      },
+      "then": {
+        "required": ["type", "value"]
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@mandate/echo-simulator",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "type": "module",
+  "dependencies": {
+    "ethers": "^6.0.0"
+  },
+  "scripts": {
+    "test": "bun test"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "mandate-reference-impl",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "mandate-schema",
+    "context-builder",
+    "guard",
+    "negotiation-messages",
+    "state-indexer",
+    "sanitiser",
+    "echo-simulator",
+    "clause-parser",
+    "reflex-preapproval",
+    "mandate-agent"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "test:all": "bun test --recursive"
+  }
+}
