@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "@/styles/globals.css";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "MANDATE",
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-night-sky text-text-primary font-dashboard antialiased">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -17,14 +17,15 @@ export interface PanelConfig {
 const PRESETS: Record<LayoutPreset, PanelConfig[]> = {
   overview: [
     { id: "map", component: "WorldMap", row: 0, col: 0, rowSpan: 2, colSpan: 2 },
-    { id: "orderbook", component: "OrderBook", row: 0, col: 2, rowSpan: 1, colSpan: 1 },
-    { id: "news", component: "NewsFeed", row: 1, col: 2, rowSpan: 1, colSpan: 1 },
+    { id: "sitrep", component: "SitrepFeed", row: 0, col: 2, rowSpan: 1, colSpan: 1 },
+    { id: "orderbook", component: "OrderBook", row: 1, col: 2, rowSpan: 1, colSpan: 1 },
   ],
   map: [
     { id: "map", component: "WorldMap", row: 0, col: 0, rowSpan: 1, colSpan: 1 },
   ],
   market: [
-    { id: "orderbook", component: "OrderBook", row: 0, col: 0, rowSpan: 1, colSpan: 3 },
+    { id: "orderbook", component: "OrderBook", row: 0, col: 0, rowSpan: 1, colSpan: 2 },
+    { id: "actions", component: "DirectActionPanel", row: 0, col: 2, rowSpan: 1, colSpan: 1 },
     { id: "history", component: "TradeHistory", row: 1, col: 0, rowSpan: 1, colSpan: 1 },
     { id: "chart", component: "PriceChart", row: 1, col: 1, rowSpan: 1, colSpan: 2 },
   ],

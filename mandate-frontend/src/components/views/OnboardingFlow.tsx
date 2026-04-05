@@ -32,6 +32,8 @@ export interface OnboardingFlowProps {
   readonly onRoleSelected?: (role: PlayerRole) => void;
   readonly onPhaseChange?: (phase: OnboardingPhase) => void;
   readonly currentView?: string;
+  /** Called after role selection to register the player on-chain */
+  readonly onRegister?: (role: PlayerRole) => Promise<boolean>;
 }
 
 // ── Instruction Bar (exported for page.tsx) ────────────────────────────────
@@ -71,6 +73,7 @@ export function OnboardingFlow({
   onModuleStateChange,
   onRoleSelected,
   onPhaseChange,
+  onRegister,
   currentView,
 }: OnboardingFlowProps) {
   const [phase, _setPhase] = useState<OnboardingPhase>("ROLE_SELECTION");
@@ -101,13 +104,42 @@ export function OnboardingFlow({
 
   // ── Role Selection ───────────────────────────────────────────────────────
 
+  const [registering, setRegistering] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+
   const handleRoleSelected = useCallback(
-    (selectedRole: PlayerRole) => {
+    async (selectedRole: PlayerRole) => {
+      console.log("[Onboarding] Role selected:", selectedRole);
       setRole(selectedRole);
       onRoleSelected?.(selectedRole);
+
+      // Trigger on-chain registration if callback provided
+      if (onRegister) {
+        console.log("[Onboarding] Starting on-chain registration...");
+        setRegistering(true);
+        setRegisterError(null);
+        try {
+          const success = await onRegister(selectedRole);
+          console.log("[Onboarding] Registration result:", success);
+          setRegistering(false);
+          if (!success) {
+            setRegisterError("Registration failed. Please try again.");
+            return;
+          }
+        } catch (err) {
+          console.error("[Onboarding] Registration error:", err);
+          setRegistering(false);
+          setRegisterError(
+            err instanceof Error ? err.message : "Registration failed unexpectedly.",
+          );
+          return;
+        }
+      }
+
+      console.log("[Onboarding] Advancing to SELF_DECLARATION");
       setPhase("SELF_DECLARATION");
     },
-    [onRoleSelected, setPhase],
+    [onRoleSelected, onRegister, setPhase],
   );
 
   // ── Self-Declaration ─────────────────────────────────────────────────────
@@ -199,7 +231,24 @@ export function OnboardingFlow({
       return (
         <>
           <div className="fixed inset-0 z-[2999] bg-night-sky" />
-          <RoleSelection onSelect={handleRoleSelected} />
+          {registering ? (
+            <div className="fixed inset-0 z-[3000] flex flex-col items-center justify-center bg-night-sky">
+              <div className="text-center space-y-4">
+                <div className="w-8 h-8 border-2 border-text-tertiary border-t-[#7CD8D5] rounded-full animate-spin mx-auto" />
+                <p className="text-sm text-text-secondary">Registering agent on-chain...</p>
+                <p className="text-xs text-text-tertiary">Minting your agent NFT and starter resources</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <RoleSelection onSelect={handleRoleSelected} />
+              {registerError && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[3001] bg-status-critical/20 border border-status-critical/40 text-status-critical text-sm px-4 py-2 rounded">
+                  {registerError}
+                </div>
+              )}
+            </>
+          )}
         </>
       );
 

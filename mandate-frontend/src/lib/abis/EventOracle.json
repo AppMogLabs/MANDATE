@@ -1,0 +1,793 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_ADMIN_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "PUBLISHER_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "SENIOR_PUBLISHER_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "eip712Domain",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "fields",
+        "type": "bytes1",
+        "internalType": "bytes1"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "version",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "chainId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "verifyingContract",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "extensions",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getActiveEvents",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple[]",
+        "internalType": "struct IEventOracle.WorldEvent[]",
+        "components": [
+          {
+            "name": "eventId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "eventType",
+            "type": "uint8",
+            "internalType": "enum IEventOracle.EventType"
+          },
+          {
+            "name": "severity",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "region",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "startTimestamp",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "durationSeconds",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "impacts",
+            "type": "tuple[]",
+            "internalType": "struct IEventOracle.ResourceImpact[]",
+            "components": [
+              {
+                "name": "resource",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "productionModBps",
+                "type": "int16",
+                "internalType": "int16"
+              },
+              {
+                "name": "demandModBps",
+                "type": "int16",
+                "internalType": "int16"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getEvent",
+    "inputs": [
+      {
+        "name": "eventId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct IEventOracle.WorldEvent",
+        "components": [
+          {
+            "name": "eventId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "eventType",
+            "type": "uint8",
+            "internalType": "enum IEventOracle.EventType"
+          },
+          {
+            "name": "severity",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "region",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "startTimestamp",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "durationSeconds",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "impacts",
+            "type": "tuple[]",
+            "internalType": "struct IEventOracle.ResourceImpact[]",
+            "components": [
+              {
+                "name": "resource",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "productionModBps",
+                "type": "int16",
+                "internalType": "int16"
+              },
+              {
+                "name": "demandModBps",
+                "type": "int16",
+                "internalType": "int16"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getEventDigest",
+    "inputs": [
+      {
+        "name": "worldEvent",
+        "type": "tuple",
+        "internalType": "struct IEventOracle.WorldEvent",
+        "components": [
+          {
+            "name": "eventId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "eventType",
+            "type": "uint8",
+            "internalType": "enum IEventOracle.EventType"
+          },
+          {
+            "name": "severity",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "region",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "startTimestamp",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "durationSeconds",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "impacts",
+            "type": "tuple[]",
+            "internalType": "struct IEventOracle.ResourceImpact[]",
+            "components": [
+              {
+                "name": "resource",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "productionModBps",
+                "type": "int16",
+                "internalType": "int16"
+              },
+              {
+                "name": "demandModBps",
+                "type": "int16",
+                "internalType": "int16"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getResourceModifier",
+    "inputs": [
+      {
+        "name": "resource",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "productionMod",
+        "type": "int256",
+        "internalType": "int256"
+      },
+      {
+        "name": "demandMod",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getRoleAdmin",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "grantRole",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "hasRole",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "publishEvent",
+    "inputs": [
+      {
+        "name": "worldEvent",
+        "type": "tuple",
+        "internalType": "struct IEventOracle.WorldEvent",
+        "components": [
+          {
+            "name": "eventId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "eventType",
+            "type": "uint8",
+            "internalType": "enum IEventOracle.EventType"
+          },
+          {
+            "name": "severity",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "region",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "startTimestamp",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "durationSeconds",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "impacts",
+            "type": "tuple[]",
+            "internalType": "struct IEventOracle.ResourceImpact[]",
+            "components": [
+              {
+                "name": "resource",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "productionModBps",
+                "type": "int16",
+                "internalType": "int16"
+              },
+              {
+                "name": "demandModBps",
+                "type": "int16",
+                "internalType": "int16"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "signature",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "publishHighSeverityEvent",
+    "inputs": [
+      {
+        "name": "worldEvent",
+        "type": "tuple",
+        "internalType": "struct IEventOracle.WorldEvent",
+        "components": [
+          {
+            "name": "eventId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "eventType",
+            "type": "uint8",
+            "internalType": "enum IEventOracle.EventType"
+          },
+          {
+            "name": "severity",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "region",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "startTimestamp",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "durationSeconds",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "impacts",
+            "type": "tuple[]",
+            "internalType": "struct IEventOracle.ResourceImpact[]",
+            "components": [
+              {
+                "name": "resource",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "productionModBps",
+                "type": "int16",
+                "internalType": "int16"
+              },
+              {
+                "name": "demandModBps",
+                "type": "int16",
+                "internalType": "int16"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "signature1",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "signature2",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "renounceRole",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "callerConfirmation",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "resolveEvent",
+    "inputs": [
+      {
+        "name": "eventId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "revokeRole",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "supportsInterface",
+    "inputs": [
+      {
+        "name": "interfaceId",
+        "type": "bytes4",
+        "internalType": "bytes4"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "EIP712DomainChanged",
+    "inputs": [],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EventPublished",
+    "inputs": [
+      {
+        "name": "eventId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "eventType",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum IEventOracle.EventType"
+      },
+      {
+        "name": "severity",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      },
+      {
+        "name": "region",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "EventResolved",
+    "inputs": [
+      {
+        "name": "eventId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleAdminChanged",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "previousAdminRole",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "newAdminRole",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleGranted",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "sender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoleRevoked",
+    "inputs": [
+      {
+        "name": "role",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "sender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AccessControlBadConfirmation",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "AccessControlUnauthorizedAccount",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "neededRole",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ECDSAInvalidSignature",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ECDSAInvalidSignatureLength",
+    "inputs": [
+      {
+        "name": "length",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ECDSAInvalidSignatureS",
+    "inputs": [
+      {
+        "name": "s",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidShortString",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "StringTooLong",
+    "inputs": [
+      {
+        "name": "str",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
+  }
+]

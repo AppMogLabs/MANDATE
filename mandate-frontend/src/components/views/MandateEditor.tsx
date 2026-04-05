@@ -221,7 +221,19 @@ const TEMPLATES = [
 
 // ─── Main Component ───
 
-export function MandateEditor() {
+const PROMPT_STARTERS = [
+  { label: "Acquire COMPUTE", text: "Prioritize acquiring COMPUTE. Trade surplus resources at favourable rates. Maintain reserves of essential materials." },
+  { label: "Trade for RATE", text: "Sell surplus resources for RATE. Focus on selling resources that are above market average price. Keep minimum reserves." },
+  { label: "Play it safe", text: "Maintain reserves of all resources. Only trade when prices are highly favourable. Avoid aggressive positions." },
+  { label: "Expand territory", text: "Claim new tiles and build infrastructure. Prioritize production buildings. Expand territory where terrain matches our strengths." },
+];
+
+interface MandateEditorProps {
+  simple?: boolean;
+  onDeploy?: (text: string, aggressiveness: number, priorityResource: string) => void;
+}
+
+export function MandateEditor({ simple = false, onDeploy }: MandateEditorProps) {
   // Layer 1 state
   const [mandateText, setMandateText] = useState(
     "Prioritise COMPUTE acquisition. Trade surplus ENERGY at no less than 1.5:1 ratio. Reject deals with agents below 4000 reputation. Maintain minimum 500 CHIPS reserve."
@@ -290,9 +302,11 @@ export function MandateEditor() {
       setSubmitState("success");
       // Notify mastery flow (if active) that a mandate was submitted
       window.dispatchEvent(new CustomEvent("mandate-submitted"));
+      // Send mandate to agent worker
+      onDeploy?.(mandateText, constraints.trading.aggressiveness, constraints.resources.priorityResource ?? "COMPUTE");
       setTimeout(() => setSubmitState("idle"), 2000);
     }, 500);
-  }, [mandateText, history.length]);
+  }, [mandateText, history.length, onDeploy, constraints.trading.aggressiveness, constraints.resources.priorityResource]);
 
   const handleSaveDraft = useCallback(() => {
     const newVersion: MandateVersion = {
@@ -321,6 +335,85 @@ export function MandateEditor() {
 
   // Line numbers for text area
   const lineCount = mandateText.split("\n").length;
+
+  // ── Simple Mode ──
+  if (simple) {
+    return (
+      <div className="h-full flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="px-3 py-2 bg-surface-1 border-b border-border-default shrink-0">
+          <span className="text-xs text-text-secondary font-dashboard uppercase tracking-wider">
+            Your Mandate
+          </span>
+        </div>
+
+        {/* Prompt Starters — shown when text is default or empty */}
+        {mandateText.length < 20 && (
+          <div className="px-3 py-2 flex flex-wrap gap-1.5 border-b border-border-default shrink-0">
+            {PROMPT_STARTERS.map((starter) => (
+              <button
+                key={starter.label}
+                onClick={() => setMandateText(starter.text)}
+                className="px-2.5 py-1 text-[11px] font-dashboard bg-surface-2 text-text-secondary border border-border-default rounded hover:bg-[#7CD8D5]/10 hover:border-[#7CD8D5]/30 hover:text-text-primary transition-colors"
+              >
+                {starter.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Textarea */}
+        <div className="flex-1 overflow-hidden">
+          <textarea
+            value={mandateText}
+            onChange={(e) => setMandateText(e.target.value)}
+            className="w-full h-full bg-surface-0 text-text-primary text-sm font-terminal p-3 resize-none focus:outline-none placeholder:text-text-tertiary"
+            placeholder="Tell your agent what to do..."
+          />
+        </div>
+
+        {/* Key controls */}
+        <div className="px-3 py-2 bg-surface-1 border-t border-border-default space-y-2 shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-text-tertiary font-dashboard w-24">Aggressiveness</span>
+            <Slider
+              value={constraints.trading.aggressiveness}
+              onChange={(v) => setConstraints((prev) => ({ ...prev, trading: { ...prev.trading, aggressiveness: v } }))}
+              min={1}
+              max={10}
+              step={1}
+              label={`${constraints.trading.aggressiveness}/10`}
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-text-tertiary font-dashboard w-24">Priority</span>
+            <Select
+              options={RESOURCE_ORDER.map((r) => ({ value: r, label: r }))}
+              value={constraints.resources.priorityResource ?? ""}
+              onChange={(v) =>
+                setConstraints((prev) => ({
+                  ...prev,
+                  resources: { ...prev.resources, priorityResource: v as ResourceType },
+                }))
+              }
+            />
+          </div>
+        </div>
+
+        {/* Submit — skip confirm dialog in simple mode */}
+        <div className="px-3 py-2 border-t border-border-default shrink-0">
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={confirmSubmit}
+            disabled={submitState === "processing" || mandateText.trim().length === 0}
+          >
+            {submitState === "processing" ? "Deploying..." : submitState === "success" ? "Mandate Active" : "Deploy Mandate"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex overflow-hidden">

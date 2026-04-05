@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ResourceBadge } from "@/components/data-display/ResourceBadge";
+import { ResourceHealthIndicator } from "@/components/data-display/ResourceHealthIndicator";
 import { Tooltip } from "@/components/tooltip";
 import type { ResourceBalance, EpochState } from "@/mock/types";
 import {
@@ -21,6 +22,8 @@ interface TopBarProps {
   rateBalance: number;
   alertMessage?: string;
   onDismissAlert?: () => void;
+  isSimpleMode?: boolean;
+  onToggleMode?: () => void;
 }
 
 export function TopBar({
@@ -31,6 +34,8 @@ export function TopBar({
   rateBalance,
   alertMessage,
   onDismissAlert,
+  isSimpleMode,
+  onToggleMode,
 }: TopBarProps) {
   const [timeRemaining, setTimeRemaining] = useState(epoch.timeRemaining);
 
@@ -72,8 +77,20 @@ export function TopBar({
 
         <div className="w-px h-6 bg-border-default" />
 
-        {/* Resource Summary */}
+        {/* Resource Summary — simplified or full */}
         <div data-tour="resource-bar" className="flex items-center gap-3 overflow-x-auto flex-1">
+          {isSimpleMode ? (
+            <>
+              <ResourceHealthIndicator resources={resources} rateBalance={rateBalance} />
+              {/* RATE balance in simple mode */}
+              <div className="flex items-center gap-1.5 shrink-0 ml-2 pl-2 border-l border-border-default">
+                <span className="text-xs text-text-tertiary">RATE</span>
+                <span className="text-sm text-moon-white tabular-nums font-dashboard">
+                  {rateBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </>
+          ) : (<>
           {orderedResources.map((rb) => {
             const net = rb.production - rb.consumption;
             const producers = RESOURCE_PRODUCERS[rb.resource];
@@ -181,7 +198,7 @@ export function TopBar({
               />
             );
           })}
-          {/* RATE balance */}
+          {/* RATE balance (advanced mode) */}
           <div className="flex items-center gap-1.5 shrink-0 ml-2 pl-2 border-l border-border-default">
             <span className="text-xs text-text-tertiary">RATE</span>
             <span className="text-sm text-moon-white tabular-nums font-dashboard">
@@ -190,17 +207,32 @@ export function TopBar({
               })}
             </span>
           </div>
+          </>)
+}
         </div>
 
         <div className="w-px h-6 bg-border-default" />
 
-        {/* Player Info */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Player Info + Mode Toggle */}
+        <div className="flex items-center gap-3 shrink-0">
+          {onToggleMode && (
+            <div className="flex items-center bg-surface-2 rounded overflow-hidden text-[10px] font-dashboard">
+              <button
+                onClick={isSimpleMode ? undefined : onToggleMode}
+                className={`px-2 py-1 transition-colors ${isSimpleMode ? "bg-[#7CD8D5] text-night-sky font-medium" : "text-text-tertiary hover:text-text-secondary"}`}
+              >
+                Simple
+              </button>
+              <button
+                onClick={isSimpleMode ? onToggleMode : undefined}
+                className={`px-2 py-1 transition-colors ${!isSimpleMode ? "bg-[#7CD8D5] text-night-sky font-medium" : "text-text-tertiary hover:text-text-secondary"}`}
+              >
+                Advanced
+              </button>
+            </div>
+          )}
           <span className="text-sm text-text-primary font-dashboard">
             {playerName}
-          </span>
-          <span className="text-xs text-text-tertiary font-dashboard">
-            {playerRole}
           </span>
         </div>
       </header>
