@@ -11,6 +11,7 @@ interface WorldMapProps {
   onClaimTile?: (q: number, r: number) => void;
   onPlaceBuilding?: (q: number, r: number) => void;
   onReleaseTile?: (q: number, r: number) => void;
+  onSelectTile?: (q: number, r: number) => void;
 }
 
 const HEX_SIZE = 32;
@@ -297,6 +298,7 @@ export function WorldMap({
   onClaimTile,
   onPlaceBuilding,
   onReleaseTile,
+  onSelectTile,
 }: WorldMapProps) {
   const [mode, setMode] = useState<MapMode>("terrain");
   const [selectedTile, setSelectedTile] = useState<HexTile | null>(null);
@@ -367,7 +369,8 @@ export function WorldMap({
   // Tile click handler
   const handleTileClick = useCallback((tile: HexTile) => {
     setSelectedTile(tile);
-  }, []);
+    onSelectTile?.(tile.q, tile.r);
+  }, [onSelectTile]);
 
   const activeViewBox = viewBox.w > 0
     ? `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`

@@ -6,6 +6,7 @@
 
 export type ActionType =
   | 'ORDER_PLACE'
+  | 'ORDER_BUY'
   | 'ORDER_CANCEL'
   | 'ORDER_MATCH'
   | 'CLAIM_PRODUCTION'

@@ -102,6 +102,36 @@ function validateAction(
       return null;
     }
 
+    case 'ORDER_BUY': {
+      const resource = params.resource as string;
+      const amount = params.amount as number;
+      const maxPrice = params.maxPrice as number | undefined;
+
+      if (!resource || !amount || amount <= 0) {
+        return 'ORDER_BUY requires resource and positive amount';
+      }
+
+      // Check price ceiling
+      if (maxPrice && constraints.trading.priceCeilings[resource]) {
+        if (maxPrice > constraints.trading.priceCeilings[resource]) {
+          return `Buy max price ${maxPrice} exceeds ceiling ${constraints.trading.priceCeilings[resource]} for ${resource}`;
+        }
+      }
+
+      // Check sufficient RATE balance for estimated cost
+      const estimatedCost = amount * (maxPrice ?? 10);
+      if (estimatedCost > gameState.rateBalance) {
+        return `Insufficient RATE for buy: need ~${estimatedCost.toFixed(2)}, have ${gameState.rateBalance.toFixed(2)}`;
+      }
+
+      // Check max single trade size
+      if (estimatedCost > constraints.trading.maxSingleTradeSize) {
+        return `Buy cost ~${estimatedCost.toFixed(2)} RATE exceeds max trade size ${constraints.trading.maxSingleTradeSize}`;
+      }
+
+      return null;
+    }
+
     case 'ORDER_CANCEL':
     case 'ORDER_MATCH':
     case 'CLAIM_PRODUCTION':

@@ -235,9 +235,15 @@ interface MandateEditorProps {
 
 export function MandateEditor({ simple = false, onDeploy }: MandateEditorProps) {
   // Layer 1 state
-  const [mandateText, setMandateText] = useState(
-    "Prioritise COMPUTE acquisition. Trade surplus ENERGY at no less than 1.5:1 ratio. Reject deals with agents below 4000 reputation. Maintain minimum 500 CHIPS reserve."
-  );
+  const [mandateText, setMandateText] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem('mandate-draft') ?? "Prioritise COMPUTE acquisition. Trade surplus ENERGY at no less than 1.5:1 ratio. Reject deals with agents below 4000 reputation. Maintain minimum 500 CHIPS reserve.";
+  });
+
+  useEffect(() => {
+    localStorage.setItem('mandate-draft', mandateText);
+  }, [mandateText]);
+
   const [showTemplates, setShowTemplates] = useState(false);
 
   // Layer 2 state

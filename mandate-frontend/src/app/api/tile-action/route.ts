@@ -55,6 +55,50 @@ export async function POST(request: NextRequest) {
   });
 
   try {
+    // Pre-check tile ownership for better error messages
+    let currentOwner: string | null = null;
+    try {
+      currentOwner = await publicClient.readContract({
+        address: mapAddress,
+        abi: MapRegistryABI,
+        functionName: 'tileOwner',
+        args: [tileId],
+      }) as string;
+    } catch {
+      // tileOwner might not exist — try getTileInfo
+      try {
+        const tileInfo = await publicClient.readContract({
+          address: mapAddress,
+          abi: MapRegistryABI,
+          functionName: 'getTileInfo',
+          args: [tileId],
+        }) as { owner: string };
+        currentOwner = tileInfo.owner;
+      } catch {
+        // Can't read ownership — proceed and let the contract revert with details
+      }
+    }
+
+    const zeroAddr = '0x0000000000000000000000000000000000000000';
+
+    if (action === 'claim' && currentOwner && currentOwner.toLowerCase() !== zeroAddr) {
+      if (currentOwner.toLowerCase() === account.address.toLowerCase()) {
+        return NextResponse.json({
+          error: 'You already own this tile. Try a different one.',
+        }, { status: 400 });
+      }
+      const shortAddr = `${currentOwner.slice(0, 6)}...${currentOwner.slice(-4)}`;
+      return NextResponse.json({
+        error: `This tile is owned by ${shortAddr}. Choose an unclaimed tile.`,
+      }, { status: 400 });
+    }
+
+    if (action === 'release' && currentOwner && currentOwner.toLowerCase() === zeroAddr) {
+      return NextResponse.json({
+        error: 'This tile is not owned — nothing to release.',
+      }, { status: 400 });
+    }
+
     let data: `0x${string}`;
 
     switch (action) {
@@ -66,12 +110,10 @@ export async function POST(request: NextRequest) {
         });
         break;
       case 'release':
-        // releaseTile doesn't exist in the ABI — use transferTileOwnership to zero address
-        // Actually check the contract for the right function
         data = encodeFunctionData({
           abi: MapRegistryABI,
           functionName: 'transferTileOwnership',
-          args: [tileId, '0x0000000000000000000000000000000000000000'],
+          args: [tileId, zeroAddr],
         });
         break;
       default:
@@ -83,15 +125,25 @@ export async function POST(request: NextRequest) {
       data,
     });
 
-    // Don't wait for receipt — MegaETH's 10ms blocks make waitForTransactionReceipt
-    // unreliable. Return the tx hash immediately; the frontend can poll chain state.
     return NextResponse.json({
       success: true,
       txHash: hash,
       tileId,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: `Tile action failed: ${message}` }, { status: 500 });
+    const raw = err instanceof Error ? err.message : 'Unknown error';
+
+    // Parse common revert reasons into user-friendly messages
+    if (raw.includes('already claimed') || raw.includes('already owned') || raw.includes('not available')) {
+      return NextResponse.json({ error: 'This tile is already owned. Choose an unclaimed tile.' }, { status: 400 });
+    }
+    if (raw.includes('not registered')) {
+      return NextResponse.json({ error: 'Your agent is not registered. Complete onboarding first.' }, { status: 400 });
+    }
+    if (raw.includes('not the owner') || raw.includes('not owner')) {
+      return NextResponse.json({ error: 'You do not own this tile.' }, { status: 400 });
+    }
+
+    return NextResponse.json({ error: `Tile action failed: ${raw.slice(0, 150)}` }, { status: 500 });
   }
 }

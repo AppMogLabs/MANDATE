@@ -42,7 +42,6 @@ import { MandateMastery } from "@/components/views/MandateMastery";
 // Mock data (gradually being replaced with live chain data)
 import { resourceBalances } from "@/mock/resources";
 import { orderBooks } from "@/mock/orderbook";
-import { hexTiles } from "@/mock/map";
 import { epochState } from "@/mock/epoch";
 import { worldEvents } from "@/mock/events";
 import {
@@ -63,7 +62,14 @@ import { useSimpleModeHints } from "@/hooks/useSimpleModeHints";
 import { useActivityFeed } from "@/hooks/useActivityFeed";
 
 // Chain hooks (live data from MegaETH testnet)
-import { useResourceBalances, useEpochState, useChainStatus } from "@/hooks/chain";
+import { useResourceBalances, useEpochState, useChainStatus, useOrderBook, useMapData } from "@/hooks/chain";
+import { usePlayerBuildings } from "@/hooks/chain/usePlayerBuildings";
+import { useNPCTicker } from "@/hooks/useNPCTicker";
+import { BuildingConstructor } from "@/components/views/BuildingConstructor";
+import { ToastContainer } from "@/components/interactive/Toast";
+import { FeedbackPanel } from "@/components/feedback";
+import { ErrorBoundary } from "@/components/layout/ErrorBoundary";
+import { useToast } from "@/hooks/useToast";
 
 export default function Home() {
   return (
@@ -134,14 +140,48 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
   // Live activity feed from on-chain OrderBook events
   const { entries: feedEntries } = useActivityFeed(walletAddress);
 
-  // Merge live chain balances into mock resource data for TopBar display
-  const liveResourceBalances = balancesLive && liveBalances
-    ? resourceBalances.map((rb) => ({
-        ...rb,
-        balance: liveBalances[rb.resource]?.toString() ?? rb.balance,
-        priceInRate: liveBalances[rb.resource] ?? rb.priceInRate,
-      }))
-    : resourceBalances;
+  // Live order book data from on-chain OrderBook contract
+  const { snapshots: liveOrderBookSnapshots, isLive: orderBookLive } = useOrderBook();
+
+  // NPC ticker — fires every 45s to keep market active
+  useNPCTicker(isRegistered);
+
+  // Live map data — reads tile ownership from MapRegistry, falls back to mock
+  const { tiles: liveTiles } = useMapData(DEPLOYER_ADDRESS);
+
+  // Player buildings from BuildingRegistry (ERC721)
+  const { buildings: playerBuildings, refetch: refetchBuildings } = usePlayerBuildings(DEPLOYER_ADDRESS);
+
+  // Selected tile for building interaction
+  const [selectedTileId, setSelectedTileId] = useState<number | null>(null);
+
+  // Encode axial hex coords to tileId (must match tile-action route)
+  const encodeTileId = useCallback((q: number, r: number) => {
+    const x = q + 10;
+    const y = r + 10;
+    return ((x & 0xFFFF) << 16) | (y & 0xFFFF);
+  }, []);
+
+  // Toast notifications
+  const { toasts, addToast, dismissToast } = useToast();
+
+  // Merge live chain balances + live orderbook prices into resource data for TopBar
+  // TopBar expects balance as a wei-scale string (divides by 1e18 for display)
+  const liveResourceBalances = resourceBalances.map((rb) => {
+    const liveBalance = balancesLive && liveBalances ? liveBalances[rb.resource] ?? 0 : 0;
+    const liveSnapshot = orderBookLive
+      ? liveOrderBookSnapshots.find((s) => s.pair === `${rb.resource}/RATE`)
+      : null;
+    const livePrice = liveSnapshot?.lastTradePrice;
+
+    return {
+      ...rb,
+      balance: balancesLive && liveBalances
+        ? BigInt(Math.round(liveBalance * 1e18)).toString()
+        : rb.balance,
+      priceInRate: livePrice && livePrice > 0 ? livePrice : rb.priceInRate,
+    };
+  });
 
   const {
     activeView,
@@ -228,6 +268,96 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
   const computeSparkline =
     resourceBalances.find((r) => r.resource === "COMPUTE")?.sparkline || [];
 
+  // ── Direct action handlers ──────────────────────────────────────────────
+
+  const handlePlaceOrder = useCallback(async (resource: string, amount: number, price: number, side: "buy" | "sell") => {
+    if (side === 'sell') {
+      // Sell = place a new sell order listing resources for RATE
+      const res = await fetch('/api/agent-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionType: 'ORDER_PLACE',
+          params: { resource, amount, price },
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? 'Sell order failed');
+      addToast(`Listed ${amount} ${resource} for sale`, 'success');
+    } else {
+      // Buy = find a sell order to match against via the buy API route
+      const res = await fetch('/api/agent-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionType: 'ORDER_BUY',
+          params: { resource, amount, maxPrice: price },
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? 'Buy order failed');
+      addToast(`Bought ${resource}`, 'success');
+    }
+  }, [addToast]);
+
+  const handleClaimProduction = useCallback(async () => {
+    // Claim production for all player buildings
+    for (const building of playerBuildings) {
+      const res = await fetch('/api/agent-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionType: 'CLAIM_PRODUCTION',
+          params: { tokenId: building.tokenId },
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? `Claim failed for building #${building.tokenId}`);
+    }
+    refetchBuildings();
+  }, [playerBuildings, refetchBuildings]);
+
+  const handleClaimSingleProduction = useCallback(async (tokenId: number) => {
+    const res = await fetch('/api/agent-action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actionType: 'CLAIM_PRODUCTION',
+        params: { tokenId },
+      }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error ?? 'Claim failed');
+  }, []);
+
+  const handleConstructBuilding = useCallback(async (buildingType: number, tileId: number) => {
+    const res = await fetch('/api/agent-action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actionType: 'CONSTRUCT_BUILDING',
+        params: { buildingType, tileId },
+      }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error ?? 'Construction failed');
+    refetchBuildings();
+  }, [refetchBuildings]);
+
+  const handleUpgradeBuilding = useCallback(async (tokenId: number) => {
+    const res = await fetch('/api/agent-action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        actionType: 'INITIATE_UPGRADE',
+        params: { tokenId },
+      }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error ?? 'Upgrade failed');
+    refetchBuildings();
+  }, [refetchBuildings]);
+
   // ── Tutorial launchers (from command palette) ────────────────────────────
 
   const handleLaunchTour = useCallback(() => {
@@ -263,7 +393,7 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
         return (
           <div data-tour="world-map" className="h-full">
             <WorldMap
-              tiles={hexTiles}
+              tiles={liveTiles}
               playerAgent="You"
               onClaimTile={(q, r) => {
                 tileActions.claimTile(q, r).then((result) => {
@@ -279,13 +409,29 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
                   }
                 });
               }}
+              onSelectTile={(q, r) => {
+                setSelectedTileId(encodeTileId(q, r));
+              }}
+              onPlaceBuilding={(q, r) => {
+                setSelectedTileId(encodeTileId(q, r));
+                switchView("Buildings");
+              }}
             />
           </div>
         );
       case "OrderBook":
         return (
           <div data-tour="order-book" className="h-full">
-            <OrderBook snapshots={orderBooks} />
+            <OrderBook snapshots={orderBookLive
+              ? orderBooks.map((mock) => {
+                  const live = liveOrderBookSnapshots.find((s) => s.pair === mock.pair);
+                  // Use live asks/bids if available, fall back to mock for display
+                  return live && (live.asks.length > 0 || live.lastTradePrice > 0)
+                    ? live
+                    : { ...mock, asks: live?.asks ?? mock.asks, bids: live?.bids ?? mock.bids };
+                })
+              : orderBooks
+            } />
           </div>
         );
       case "NewsFeed":
@@ -294,8 +440,31 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
             <NewsFeed events={worldEvents} />
           </div>
         );
-      case "BuildingDetail":
-        return <BuildingDetail building={null} />;
+      case "BuildingDetail": {
+        // If a tile is selected and has a building, show building detail
+        const tileBuilding = selectedTileId != null
+          ? playerBuildings.find((b) => b.tileId === selectedTileId)
+          : playerBuildings[0] ?? null;
+
+        if (selectedTileId != null && !tileBuilding) {
+          // Owned tile with no building — show constructor
+          return (
+            <BuildingConstructor
+              tileId={selectedTileId}
+              onConstruct={handleConstructBuilding}
+            />
+          );
+        }
+
+        return (
+          <BuildingDetail
+            building={null}
+            chainBuilding={tileBuilding}
+            onClaimProduction={handleClaimSingleProduction}
+            onUpgrade={handleUpgradeBuilding}
+          />
+        );
+      }
       case "ProductionSummary":
         return <ProductionSummary resources={resourceBalances} />;
       case "EchoOracle":
@@ -321,7 +490,12 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
           />
         );
       case "DirectActionPanel":
-        return <DirectActionPanel />;
+        return (
+          <DirectActionPanel
+            onPlaceOrder={handlePlaceOrder}
+            onClaimProduction={handleClaimProduction}
+          />
+        );
       default:
         return (
           <div className="h-full flex items-center justify-center text-text-tertiary text-sm">
@@ -364,7 +538,7 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
           <SimpleLayout
             mapSlot={
               <WorldMap
-                tiles={hexTiles}
+                tiles={liveTiles}
                 playerAgent="You"
                 compact
                 onClaimTile={(q, r) => {
@@ -387,6 +561,35 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
                   onConfigured={agentLifecycle.configureLLM}
                   isConfigured={false}
                 />
+              ) : agentLifecycle.mandateDeployed ? (
+                <div className="h-full flex flex-col">
+                  <LLMSetup
+                    onConfigured={agentLifecycle.configureLLM}
+                    isConfigured={true}
+                  />
+                  <div className="flex-1 overflow-hidden p-3 font-dashboard space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        agentLifecycle.agent.status === 'running' ? 'bg-status-success animate-pulse' :
+                        agentLifecycle.agent.status === 'error' ? 'bg-status-critical' :
+                        'bg-text-tertiary'
+                      }`} />
+                      <span className="text-xs text-text-primary">
+                        Agent {agentLifecycle.agent.status === 'running' ? 'running' : agentLifecycle.agent.status}
+                      </span>
+                      <span className="text-xs text-text-tertiary ml-auto">
+                        Tick #{agentLifecycle.agent.tickNumber}
+                      </span>
+                    </div>
+                    <p className="text-xs text-text-secondary">
+                      Mandate deployed. Switch to advanced mode for full controls.
+                    </p>
+                    <MandateEditor
+                      simple
+                      onDeploy={agentLifecycle.deployMandate}
+                    />
+                  </div>
+                </div>
               ) : (
                 <div className="h-full flex flex-col">
                   <LLMSetup
@@ -421,11 +624,14 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
 
             {/* Main Content Area */}
             <div className="flex flex-1 overflow-hidden">
-              <PanelLayout panels={panels} renderPanel={renderPanel} />
+              <PanelLayout panels={panels} renderPanel={(config) => (
+                <ErrorBoundary>{renderPanel(config)}</ErrorBoundary>
+              )} />
               <Sidebar
                 defaultCollapsed={sidebarCollapsed}
                 criticalCount={criticalCount}
                 warningCount={warningCount}
+                feedbackSlot={<FeedbackPanel walletAddress={DEPLOYER_ADDRESS} />}
               >
                 <ActivityFeed entries={feedEntries} />
               </Sidebar>
@@ -477,6 +683,9 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
           />
         )}
       </div>
+
+      {/* Toast notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
 
       {/* Onboarding — for new (unregistered) players */}
       {showOnboarding && (

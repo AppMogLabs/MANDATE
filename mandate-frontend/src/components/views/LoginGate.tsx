@@ -1,10 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePlayerRegistration } from '@/hooks/chain/usePlayerRegistration';
 
 const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID ?? '';
 const PRIVY_CONFIGURED = !!PRIVY_APP_ID && PRIVY_APP_ID !== 'placeholder';
+const PRIVY_TIMEOUT_MS = 8_000; // Fall back to dev mode if Privy doesn't init in 8s
 
 interface LoginGateProps {
   /** Render when authenticated + registration checked */
@@ -70,9 +72,21 @@ function AuthenticatedGate({
   const { isRegistered, agentId, isLoading: registrationLoading } =
     usePlayerRegistration(walletAddress);
 
-  // Privy still initializing
-  if (!ready) {
+  // Privy still initializing — fall back to dev mode after timeout
+  const [privyTimedOut, setPrivyTimedOut] = useState(false);
+  useEffect(() => {
+    if (ready) return;
+    const timer = setTimeout(() => setPrivyTimedOut(true), PRIVY_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [ready]);
+
+  if (!ready && !privyTimedOut) {
     return <LoadingScreen message="Initializing..." />;
+  }
+
+  if (!ready && privyTimedOut) {
+    // Privy failed to initialize — fall back to dev mode
+    return <DevModeFallback>{children}</DevModeFallback>;
   }
 
   // Not logged in — show landing with Play button

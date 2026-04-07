@@ -5,6 +5,7 @@ import { StatusDot } from "@/components/data-display/StatusDot";
 
 interface SidebarProps {
   children: ReactNode;
+  feedbackSlot?: ReactNode;
   defaultCollapsed?: boolean;
   criticalCount?: number;
   warningCount?: number;
@@ -12,11 +13,13 @@ interface SidebarProps {
 
 export function Sidebar({
   children,
+  feedbackSlot,
   defaultCollapsed = false,
   criticalCount = 0,
   warningCount = 0,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const [activeTab, setActiveTab] = useState<"activity" | "feedback">("feedback");
 
   if (collapsed) {
     return (
@@ -45,7 +48,7 @@ export function Sidebar({
           className="text-xs text-text-tertiary font-terminal mt-auto"
           style={{ writingMode: "vertical-rl" }}
         >
-          AGENT FEED
+          {activeTab === "activity" ? "AGENT FEED" : "FEEDBACK"}
         </span>
       </aside>
     );
@@ -53,13 +56,35 @@ export function Sidebar({
 
   return (
     <aside data-tour="agent-feed" className="w-80 bg-surface-1 border-l border-border-default flex flex-col shrink-0 overflow-hidden">
-      <div className="flex items-center justify-between h-8 px-3 border-b border-border-default shrink-0">
-        <span className="text-xs text-text-secondary font-terminal uppercase tracking-wider">
-          Agent Activity
-        </span>
+      {/* Tab strip + collapse button */}
+      <div className="flex items-center h-8 border-b border-border-default shrink-0">
+        <button
+          onClick={() => setActiveTab("activity")}
+          className={[
+            "flex-1 h-full text-xs font-terminal uppercase tracking-wider transition-colors",
+            activeTab === "activity"
+              ? "text-text-primary border-b border-text-primary"
+              : "text-text-tertiary hover:text-text-secondary",
+          ].join(" ")}
+        >
+          Activity
+        </button>
+        {feedbackSlot && (
+          <button
+            onClick={() => setActiveTab("feedback")}
+            className={[
+              "flex-1 h-full text-xs font-terminal uppercase tracking-wider transition-colors",
+              activeTab === "feedback"
+                ? "text-text-primary border-b border-text-primary"
+                : "text-text-tertiary hover:text-text-secondary",
+            ].join(" ")}
+          >
+            Feedback
+          </button>
+        )}
         <button
           onClick={() => setCollapsed(true)}
-          className="text-text-tertiary hover:text-text-secondary transition-colors"
+          className="px-2 text-text-tertiary hover:text-text-secondary transition-colors"
           aria-label="Collapse sidebar"
         >
           <svg
@@ -73,7 +98,11 @@ export function Sidebar({
           </svg>
         </button>
       </div>
-      <div className="flex-1 overflow-hidden">{children}</div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === "activity" ? children : feedbackSlot ?? children}
+      </div>
     </aside>
   );
 }

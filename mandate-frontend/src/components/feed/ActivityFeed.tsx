@@ -58,12 +58,13 @@ export function ActivityFeed({ entries }: ActivityFeedProps) {
   const [paused, setPaused] = useState(false);
   const [expandedBatch, setExpandedBatch] = useState<number | null>(null);
 
-  const batched = batchEntries(entries);
+  // Reverse so newest entries appear at top
+  const batched = batchEntries(entries).reverse();
 
-  // Auto-scroll to bottom unless paused
+  // Auto-scroll to top unless paused
   useEffect(() => {
     if (!paused && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTop = 0;
     }
   }, [entries.length, paused]);
 

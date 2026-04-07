@@ -26,7 +26,7 @@ export function SimpleLayout({ mapSlot, sitrepSlot, mandateSlot, hintBar }: Simp
         <div className="overflow-hidden border-r border-border-default">
           {sitrepSlot}
         </div>
-        <div className="overflow-hidden">
+        <div className="overflow-y-auto">
           {mandateSlot}
         </div>
       </div>

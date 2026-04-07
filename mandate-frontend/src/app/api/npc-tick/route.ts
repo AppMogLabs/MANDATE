@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createWalletClient, createPublicClient, http, encodeFunctionData, formatUnits, parseUnits } from 'viem';
+import { createWalletClient, createPublicClient, http, encodeFunctionData, formatUnits, parseUnits, parseAbiItem } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { megaethTestnet } from '@/lib/wagmi-config';
 import { TESTNET_ADDRESSES } from '@/lib/addresses';
@@ -146,38 +146,43 @@ async function readNPCState(npcAddress: string): Promise<MarketState> {
     balances[name] = Number(formatUnits(bal, 18));
   }
 
-  // Read active orders — scan recent order IDs only (last 10)
+  // Discover active orders via events instead of hardcoded range
+  const currentBlock = await publicClient.getBlockNumber();
+  const fromBlock = currentBlock > 500_000n ? currentBlock - 500_000n : 0n;
+
+  const placedLogs = await publicClient.getLogs({
+    address: ORDER_BOOK,
+    event: parseAbiItem('event OrderPlaced(uint256 indexed orderId, address indexed seller, address indexed resourceToken, uint256 amount, uint256 pricePerUnit)'),
+    fromBlock,
+    toBlock: currentBlock,
+  });
+
+  // Get unique order IDs (most recent 50)
+  const orderIds = [...new Set(placedLogs.map(log => Number(log.args.orderId)))].slice(-50);
+
   const activeOrders: MarketState['activeOrders'] = [];
-  for (let i = 17; i <= 27; i++) {
+  for (const id of orderIds) {
     try {
       const orderData = await publicClient.readContract({
         address: ORDER_BOOK,
         abi: OrderBookABI,
         functionName: 'orders',
-        args: [BigInt(i)],
+        args: [BigInt(id)],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any) as readonly [bigint, string, string, bigint, bigint, bigint, number, bigint];
 
       const [, seller, resourceToken, totalAmount, filledAmount, pricePerUnit, status] = orderData;
-      // status 1 = ORDER_PLACED (active)
       if (status === 1 && totalAmount > filledAmount) {
         const remaining = Number(formatUnits(totalAmount - filledAmount, 18));
         const price = Number(formatUnits(pricePerUnit, 18));
-        // Reverse-lookup resource name
         const resource = Object.entries(RESOURCES).find(
           ([, a]) => a.toLowerCase() === resourceToken.toLowerCase()
         )?.[0] ?? 'UNKNOWN';
 
-        activeOrders.push({
-          orderId: i,
-          seller,
-          resource,
-          amount: remaining,
-          price,
-        });
+        activeOrders.push({ orderId: id, seller, resource, amount: remaining, price });
       }
     } catch {
-      // Order doesn't exist or read failed — skip
+      // Order doesn't exist or read failed
     }
   }
 

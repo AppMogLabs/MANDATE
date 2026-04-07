@@ -57,10 +57,10 @@ export function FeedEntry({ entry }: FeedEntryProps) {
         {actionKeyword ? (
           <span className="flex items-baseline gap-1.5 truncate">
             <Tag label={actionKeyword} colour={ACTION_KEYWORD_COLOURS[actionKeyword]} />
-            <span className="text-text-primary truncate">{entry.action}</span>
+            <span className="text-text-secondary truncate">{entry.detail || entry.action}</span>
           </span>
         ) : (
-          <span className="text-text-primary truncate">{entry.action}</span>
+          <span className="text-text-primary truncate">{entry.detail || entry.action}</span>
         )}
       </div>
 

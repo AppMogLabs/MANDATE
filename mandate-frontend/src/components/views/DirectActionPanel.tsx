@@ -16,8 +16,8 @@ const RESOURCE_OPTIONS = [
 ];
 
 interface DirectActionPanelProps {
-  readonly onPlaceOrder?: (resource: string, amount: number, price: number, side: "buy" | "sell") => void;
-  readonly onClaimProduction?: () => void;
+  readonly onPlaceOrder?: (resource: string, amount: number, price: number, side: "buy" | "sell") => Promise<void>;
+  readonly onClaimProduction?: () => Promise<void>;
 }
 
 /**
@@ -34,16 +34,42 @@ export function DirectActionPanel({ onPlaceOrder, onClaimProduction }: DirectAct
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [submitting, setSubmitting] = useState(false);
 
+  const [statusMessage, setStatusMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
   const handlePlaceOrder = async () => {
     const amt = parseFloat(amount);
     const prc = parseFloat(price);
     if (isNaN(amt) || isNaN(prc) || amt <= 0 || prc <= 0) return;
 
     setSubmitting(true);
-    onPlaceOrder?.(resource, amt, prc, side);
-    setSubmitting(false);
-    setAmount("");
-    setPrice("");
+    setStatusMessage(null);
+    try {
+      await onPlaceOrder?.(resource, amt, prc, side);
+      setStatusMessage({ text: `${side === "buy" ? "Buy" : "Sell"} order submitted`, type: "success" });
+      setAmount("");
+      setPrice("");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Order failed";
+      setStatusMessage({ text: msg, type: "error" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const [claimingProduction, setClaimingProduction] = useState(false);
+
+  const handleClaimProduction = async () => {
+    setClaimingProduction(true);
+    setStatusMessage(null);
+    try {
+      await onClaimProduction?.();
+      setStatusMessage({ text: "Production claimed", type: "success" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Claim failed";
+      setStatusMessage({ text: msg, type: "error" });
+    } finally {
+      setClaimingProduction(false);
+    }
   };
 
   return (
@@ -157,6 +183,17 @@ export function DirectActionPanel({ onPlaceOrder, onClaimProduction }: DirectAct
             >
               {submitting ? "Submitting..." : `${side === "buy" ? "Buy" : "Sell"} ${resource}`}
             </Button>
+
+            {/* Status message */}
+            {statusMessage && (
+              <div className={`text-xs font-dashboard rounded px-2 py-1.5 ${
+                statusMessage.type === "success"
+                  ? "bg-status-success/10 text-status-success"
+                  : "bg-status-critical/10 text-status-critical"
+              }`}>
+                {statusMessage.text}
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -166,10 +203,22 @@ export function DirectActionPanel({ onPlaceOrder, onClaimProduction }: DirectAct
             <Button
               variant="primary"
               size="sm"
-              onClick={onClaimProduction}
+              disabled={claimingProduction}
+              onClick={handleClaimProduction}
             >
-              Claim All Production
+              {claimingProduction ? "Claiming..." : "Claim All Production"}
             </Button>
+
+            {/* Status message */}
+            {statusMessage && (
+              <div className={`text-xs font-dashboard rounded px-2 py-1.5 ${
+                statusMessage.type === "success"
+                  ? "bg-status-success/10 text-status-success"
+                  : "bg-status-critical/10 text-status-critical"
+              }`}>
+                {statusMessage.text}
+              </div>
+            )}
           </>
         )}
       </div>

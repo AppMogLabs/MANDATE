@@ -6,7 +6,7 @@
 import type { LLMResponse, ProposedAction } from './types';
 
 const VALID_ACTION_TYPES = new Set([
-  'ORDER_PLACE', 'ORDER_CANCEL', 'ORDER_MATCH',
+  'ORDER_PLACE', 'ORDER_BUY', 'ORDER_CANCEL', 'ORDER_MATCH',
   'CLAIM_PRODUCTION', 'BUILD', 'DEMOLISH',
 ]);
 

@@ -35,7 +35,7 @@ export function TradeHistory({ entries }: TradeHistoryProps) {
             <span className="text-text-secondary shrink-0">
               {entry.agentName}
             </span>
-            <span className="text-text-primary truncate">{entry.action}</span>
+            <span className="text-text-primary truncate">{entry.detail || entry.action}</span>
           </div>
         ))
       )}
