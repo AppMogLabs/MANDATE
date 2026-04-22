@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
 
             // Check: active, correct resource, not fully filled
             if (
-              status === 1 &&
+              status === 0 &&
               totalAmount > filledAmount &&
               (resourceToken as string).toLowerCase() === resourceAddr.toLowerCase()
             ) {

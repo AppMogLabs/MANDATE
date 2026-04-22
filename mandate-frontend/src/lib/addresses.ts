@@ -48,5 +48,7 @@ export const TESTNET_ADDRESSES = {
     rentCollector: '0x05060a0feef6fcaca7f896a405f1fb87a7773155',
     // Phase 6: Player onboarding (deployed 2026-04-03)
     playerOnboarding: '0x77EC9115f982c6e48eB5701d3b7ad114c973B539',
+    // MVP: Epoch + leaderboard (deployed 2026-04-22)
+    mvpEpoch: '0x300E54B0a6b45C2bE22C97053101f83E2C31f41b',
   },
 } as const;

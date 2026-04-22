@@ -18,7 +18,7 @@ const PRESETS: Record<LayoutPreset, PanelConfig[]> = {
   overview: [
     { id: "map", component: "WorldMap", row: 0, col: 0, rowSpan: 2, colSpan: 2 },
     { id: "sitrep", component: "SitrepFeed", row: 0, col: 2, rowSpan: 1, colSpan: 1 },
-    { id: "orderbook", component: "OrderBook", row: 1, col: 2, rowSpan: 1, colSpan: 1 },
+    { id: "depth", component: "MarketDepth", row: 1, col: 2, rowSpan: 1, colSpan: 1 },
   ],
   map: [
     { id: "map", component: "WorldMap", row: 0, col: 0, rowSpan: 1, colSpan: 1 },

@@ -27,6 +27,7 @@ import { GuardClauseMarketplace } from "@/components/views/GuardClauseMarketplac
 import { ProductionSummary } from "@/components/views/ProductionSummary";
 import { TradeHistory } from "@/components/views/TradeHistory";
 import { PriceChart } from "@/components/views/PriceChart";
+import { MarketDepth } from "@/components/views/MarketDepth";
 import { MandateEditor } from "@/components/views/MandateEditor";
 import { SitrepFeed } from "@/components/views/SitrepFeed";
 import { DirectActionPanel } from "@/components/views/DirectActionPanel";
@@ -132,6 +133,7 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
   } = useResourceBalances(DEPLOYER_ADDRESS);
   const {
     epochNumber: liveEpochNumber,
+    endTimestamp: liveEndTimestamp,
     timeRemaining: liveTimeRemaining,
     isLive: epochLive,
   } = useEpochState();
@@ -145,6 +147,34 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
 
   // NPC ticker — fires every 45s to keep market active
   useNPCTicker(isRegistered);
+
+  // ── Sync live chain data → agent game state ────────────────────────────────
+  // Without this, the agent uses hardcoded fallback balances (e.g. CHIPS: 50)
+  // instead of real on-chain values.
+  useEffect(() => {
+    if (!balancesLive || !liveBalances) return;
+
+    const marketPrices: Record<string, number> = {};
+    const orderBook: Record<string, { price: number; volume: number }[]> = {};
+    for (const snap of liveOrderBookSnapshots) {
+      const resource = snap.pair.replace('/RATE', '');
+      if (snap.lastTradePrice > 0) {
+        marketPrices[resource] = snap.lastTradePrice;
+      }
+      if (snap.asks.length > 0) {
+        orderBook[resource] = snap.asks.map((a) => ({ price: a.price, volume: a.volume }));
+      }
+    }
+
+    agentLifecycle.updateGameState({
+      balances: liveBalances,
+      rateBalance: liveRateBalance,
+      epochNumber: epochLive ? liveEpochNumber : 1,
+      timeRemaining: epochLive ? liveTimeRemaining : 3600,
+      marketPrices,
+      orderBook,
+    });
+  }, [liveBalances, liveRateBalance, liveEpochNumber, liveTimeRemaining, liveOrderBookSnapshots, balancesLive, epochLive, agentLifecycle.updateGameState]);
 
   // Live map data — reads tile ownership from MapRegistry, falls back to mock
   const { tiles: liveTiles } = useMapData(DEPLOYER_ADDRESS);
@@ -425,10 +455,9 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
             <OrderBook snapshots={orderBookLive
               ? orderBooks.map((mock) => {
                   const live = liveOrderBookSnapshots.find((s) => s.pair === mock.pair);
-                  // Use live asks/bids if available, fall back to mock for display
-                  return live && (live.asks.length > 0 || live.lastTradePrice > 0)
-                    ? live
-                    : { ...mock, asks: live?.asks ?? mock.asks, bids: live?.bids ?? mock.bids };
+                  if (!live) return mock;
+                  // Use live data when it has content; otherwise keep mock entirely
+                  return (live.asks.length > 0 || live.lastTradePrice > 0) ? live : mock;
                 })
               : orderBooks
             } />
@@ -479,8 +508,29 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
         return <TradeHistory entries={feedEntries} />;
       case "PriceChart":
         return <PriceChart data={computeSparkline} />;
+      case "MarketDepth":
+        return (
+          <MarketDepth snapshots={orderBookLive
+            ? orderBooks.map((mock) => {
+                const live = liveOrderBookSnapshots.find((s) => s.pair === mock.pair);
+                if (!live) return mock;
+                return (live.asks.length > 0 || live.lastTradePrice > 0) ? live : mock;
+              })
+            : orderBooks
+          } />
+        );
       case "MandateView":
-        return <MandateEditor />;
+        return (
+          <div className="h-full flex flex-col">
+            <LLMSetup
+              onConfigured={agentLifecycle.configureLLM}
+              isConfigured={agentLifecycle.llmConfigured}
+            />
+            <div className="flex-1 overflow-hidden">
+              <MandateEditor onDeploy={agentLifecycle.deployMandate} />
+            </div>
+          </div>
+        );
       case "SitrepFeed":
         return (
           <SitrepFeed
@@ -518,9 +568,10 @@ function GameShell({ walletAddress, isRegistered }: GameShellProps) {
           epoch={
             epochLive
               ? {
-                  ...epochState,
                   epochNumber: liveEpochNumber,
-                  timeRemaining: liveTimeRemaining * 1000,
+                  startTimestamp: liveEndTimestamp - liveTimeRemaining,
+                  endTimestamp: liveEndTimestamp,
+                  timeRemaining: liveTimeRemaining,
                 }
               : epochState
           }

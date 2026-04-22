@@ -94,12 +94,19 @@ export interface Mandate {
 
 // ── Game State (read from chain) ──────────────────────────────────────────────
 
+export interface OrderLevel {
+  readonly price: number;
+  readonly volume: number;
+}
+
 export interface GameState {
   readonly balances: Record<string, number>;
   readonly rateBalance: number;
   readonly epochNumber: number;
   readonly timeRemaining: number;
   readonly marketPrices: Record<string, number>;
+  /** Live ask levels per resource (sell orders on the book) */
+  readonly orderBook?: Record<string, readonly OrderLevel[]>;
 }
 
 // ── Worker Messages ───────────────────────────────────────────────────────────

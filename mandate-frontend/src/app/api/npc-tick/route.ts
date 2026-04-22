@@ -172,7 +172,7 @@ async function readNPCState(npcAddress: string): Promise<MarketState> {
       } as any) as readonly [bigint, string, string, bigint, bigint, bigint, number, bigint];
 
       const [, seller, resourceToken, totalAmount, filledAmount, pricePerUnit, status] = orderData;
-      if (status === 1 && totalAmount > filledAmount) {
+      if (status === 0 && totalAmount > filledAmount) {
         const remaining = Number(formatUnits(totalAmount - filledAmount, 18));
         const price = Number(formatUnits(pricePerUnit, 18));
         const resource = Object.entries(RESOURCES).find(

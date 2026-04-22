@@ -71,7 +71,7 @@ interface MatchedTrade {
   blockNumber: bigint;
 }
 
-const POLL_INTERVAL = 15_000;
+const POLL_INTERVAL = 8_000;
 const INITIAL_LOOKBACK = 5_000_000n; // ~14 hours on MegaETH's 10ms blocks
 
 /**
@@ -91,6 +91,9 @@ export function useOrderBook(): {
   const [snapshots, setSnapshots] = useState<OrderBookSnapshot[]>([]);
   const [isLive, setIsLive] = useState(false);
   const lastBlockRef = useRef<bigint>(0n);
+  // Cache: active orders from last poll (avoids re-reading unchanged orders)
+  const cachedOrdersRef = useRef<Map<bigint, OnChainOrder>>(new Map());
+  const isFirstPollRef = useRef(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,8 +111,8 @@ export function useOrderBook(): {
 
         if (fromBlock > currentBlock) return;
 
-        // Fetch placed and matched events in parallel
-        const [placedLogs, matchedLogs] = await Promise.all([
+        // Fetch placed, matched, and cancelled events in parallel
+        const [placedLogs, matchedLogs, cancelledLogs] = await Promise.all([
           publicClient.getLogs({
             address: ORDER_BOOK,
             event: orderPlacedEvent,
@@ -122,23 +125,47 @@ export function useOrderBook(): {
             fromBlock,
             toBlock: currentBlock,
           }),
+          publicClient.getLogs({
+            address: ORDER_BOOK,
+            event: orderCancelledEvent,
+            fromBlock,
+            toBlock: currentBlock,
+          }),
         ]);
 
         lastBlockRef.current = currentBlock;
 
         if (cancelled) return;
 
-        // Collect unique order IDs from placed events
-        const orderIds = new Set<bigint>();
+        // Collect IDs that need reading: new placements + orders with activity
+        const idsToRead = new Set<bigint>();
         for (const log of placedLogs) {
-          if (log.args.orderId != null) {
-            orderIds.add(log.args.orderId);
-          }
+          if (log.args.orderId != null) idsToRead.add(log.args.orderId);
+        }
+        for (const log of matchedLogs) {
+          if (log.args.orderId != null) idsToRead.add(log.args.orderId);
+        }
+        for (const log of cancelledLogs) {
+          if (log.args.orderId != null) idsToRead.add(log.args.orderId);
         }
 
-        // Batch-read order details from the contract
-        const orderResults = await Promise.all(
-          Array.from(orderIds).map(async (id): Promise<OnChainOrder | null> => {
+        // On first poll, read all discovered orders. On subsequent polls,
+        // only re-read orders with new activity — use cache for the rest.
+        const isFirstPoll = isFirstPollRef.current;
+        isFirstPollRef.current = false;
+
+        if (isFirstPoll) {
+          // First poll: read all discovered orders
+        } else if (idsToRead.size === 0) {
+          // No activity — keep existing snapshots, just update matched trades
+          // (snapshots don't change if no orders were placed/matched/cancelled)
+          return;
+        }
+
+        // For first poll: idsToRead already has all placed IDs from initial lookback.
+        // For subsequent polls: only read changed orders, merge with cache.
+        const readResults = await Promise.all(
+          Array.from(idsToRead).map(async (id): Promise<OnChainOrder | null> => {
             try {
               const result = await publicClient.readContract({
                 address: ORDER_BOOK,
@@ -166,11 +193,29 @@ export function useOrderBook(): {
 
         if (cancelled) return;
 
-        // Filter to active orders (status 1, not fully filled)
-        const activeOrders = orderResults.filter(
-          (o): o is OnChainOrder =>
-            o !== null && o.status === 1 && o.totalAmount > o.filledAmount,
-        );
+        // Merge fresh reads into the cache
+        for (const order of readResults) {
+          if (!order) continue;
+          if (order.status === 0 && order.totalAmount > order.filledAmount) {
+            cachedOrdersRef.current.set(order.orderId, order);
+          } else {
+            // No longer active — remove from cache
+            cachedOrdersRef.current.delete(order.orderId);
+          }
+        }
+
+        // Build active orders from cache
+        const activeOrders = Array.from(cachedOrdersRef.current.values());
+        const orderById = new Map<bigint, OnChainOrder>();
+        for (const o of activeOrders) {
+          orderById.set(o.orderId, o);
+        }
+        // Also include non-active reads for matched trade price resolution
+        for (const o of readResults) {
+          if (o && !orderById.has(o.orderId)) {
+            orderById.set(o.orderId, o);
+          }
+        }
 
         // Group active orders by resource for ask levels
         const asksByResource = new Map<ResourceType, OrderBookLevel[]>();
@@ -206,14 +251,12 @@ export function useOrderBook(): {
           const { orderId, fillAmount, rateAmount } = log.args;
           if (!orderId || !fillAmount || !rateAmount || fillAmount === 0n) continue;
 
-          // Find the resource from the placed event for this order
-          const placedLog = placedLogs.find(
-            (p) => p.args.orderId === orderId,
-          );
-          if (!placedLog?.args.resourceToken) continue;
+          // Resolve resource from order data (works across poll boundaries)
+          const order = orderId != null ? orderById.get(orderId) : undefined;
+          const resourceAddr = order?.resourceToken;
+          if (!resourceAddr) continue;
 
-          const resource =
-            ADDR_TO_RESOURCE[placedLog.args.resourceToken.toLowerCase()];
+          const resource = ADDR_TO_RESOURCE[resourceAddr.toLowerCase()];
           if (!resource) continue;
 
           const pricePerUnit =

@@ -39,6 +39,11 @@ export function TopBar({
 }: TopBarProps) {
   const [timeRemaining, setTimeRemaining] = useState(epoch.timeRemaining);
 
+  // Re-sync when live epoch data arrives or changes
+  useEffect(() => {
+    setTimeRemaining(epoch.timeRemaining);
+  }, [epoch.timeRemaining]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeRemaining((prev) => Math.max(0, prev - 1));
@@ -46,10 +51,11 @@ export function TopBar({
     return () => clearInterval(interval);
   }, []);
 
-  const progress =
-    1 -
-    timeRemaining /
-      ((epoch.endTimestamp - epoch.startTimestamp) / 1000);
+  // Epoch duration: derive from timestamps (seconds) or fall back to 30 days
+  const epochDuration = epoch.endTimestamp > epoch.startTimestamp
+    ? epoch.endTimestamp - epoch.startTimestamp
+    : 30 * 24 * 3600;
+  const progress = epochDuration > 0 ? 1 - timeRemaining / epochDuration : 0;
 
   const orderedResources = RESOURCE_ORDER.map(
     (r) => resources.find((rb) => rb.resource === r)!
