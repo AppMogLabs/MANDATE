@@ -8,6 +8,14 @@
 
 import type { Mandate, GameState } from './types';
 
+export interface MvpMarketContext {
+  readonly openSells: Record<'COMPUTE' | 'CHIPS' | 'DATA', Array<{
+    orderId: number;
+    price: number;
+    remaining: number;
+  }>>;
+}
+
 const MVP_SYSTEM_ZONE = `You are a MANDATE agent — an autonomous trader on the MegaETH testnet.
 
 RULES:
@@ -22,14 +30,15 @@ This is a SELL-SIDE order book. Only sell listings exist on-chain. There are NO 
 - To sell resources: ORDER_PLACE creates a sell listing that sits on the book until matched.
 
 TRADING ACTIONS (the only actions you may propose):
-- ORDER_BUY: Instantly buy from the cheapest sell listing at or below maxPrice.
-  params: { "resource": "CHIPS", "amount": 100, "maxPrice": 2.5 }
+- ORDER_BUY: Match an EXISTING sell listing. You must specify the orderId from the "OPEN SELL LISTINGS" in the state.
+  params: { "orderId": 42, "amount": 100 }
+  (amount = how many units to buy from that order, must be <= remaining)
 - ORDER_PLACE: List YOUR resources for sale.
   params: { "resource": "CHIPS", "amount": 100, "price": 2.1 }
 - ORDER_CANCEL: Cancel your own listing.
   params: { "orderId": 42 }
 
-DO NOT propose CLAIM_PRODUCTION, BUILD, DEMOLISH, or ORDER_MATCH — those actions do not exist in this game.
+DO NOT propose CLAIM_PRODUCTION, BUILD, DEMOLISH. Do not invent orderIds — only use ones listed in the state.
 
 GAMEPLAY CONTEXT:
 - The epoch lasts 7 days. Your goal is to maximise the player's RATE-equivalent portfolio value.
@@ -65,7 +74,7 @@ Aggressiveness: ${m.layer2.trading.aggressiveness}/10 (${m.layer2.risk.tolerance
 Priority resource: ${m.layer2.reserves.priorityResource}`;
 }
 
-function renderState(s: GameState): string {
+function renderState(s: GameState, market?: MvpMarketContext): string {
   const { balances, rateBalance, marketPrices, timeRemaining } = s;
   const lines = [
     '## CURRENT STATE',
@@ -80,12 +89,35 @@ function renderState(s: GameState): string {
     ...['COMPUTE', 'CHIPS', 'DATA'].map(
       (r) => `  ${r}: ${(marketPrices[r] ?? 0).toFixed(4)}`,
     ),
+  ];
+
+  if (market) {
+    lines.push('', 'OPEN SELL LISTINGS (you may ORDER_BUY these):');
+    let any = false;
+    for (const r of ['COMPUTE', 'CHIPS', 'DATA'] as const) {
+      const orders = market.openSells[r];
+      if (!orders || orders.length === 0) continue;
+      any = true;
+      for (const o of orders) {
+        lines.push(
+          `  #${o.orderId} — ${r} ${o.remaining.toFixed(2)} @ ${o.price.toFixed(4)} RATE`,
+        );
+      }
+    }
+    if (!any) lines.push('  (no open listings right now)');
+  }
+
+  lines.push(
     '',
     `Epoch time remaining: ${Math.floor(timeRemaining / 3600)}h ${Math.floor((timeRemaining % 3600) / 60)}m`,
-  ];
+  );
   return lines.join('\n');
 }
 
-export function assembleMvpPrompt(mandate: Mandate, state: GameState): string {
-  return [MVP_SYSTEM_ZONE, '', renderMandate(mandate), '', renderState(state)].join('\n');
+export function assembleMvpPrompt(
+  mandate: Mandate,
+  state: GameState,
+  market?: MvpMarketContext,
+): string {
+  return [MVP_SYSTEM_ZONE, '', renderMandate(mandate), '', renderState(state, market)].join('\n');
 }

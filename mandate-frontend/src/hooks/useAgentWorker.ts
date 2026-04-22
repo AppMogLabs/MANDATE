@@ -79,7 +79,19 @@ export function useAgentWorker(
     try {
       // 1. Assemble prompt (MVP variant trims production/building concepts)
       const prompt = config.promptVariant === 'mvp'
-        ? assembleMvpPrompt(mandate, state)
+        ? assembleMvpPrompt(
+            mandate,
+            state,
+            state.mvpOpenSells
+              ? {
+                  openSells: {
+                    COMPUTE: [...(state.mvpOpenSells.COMPUTE ?? [])],
+                    CHIPS: [...(state.mvpOpenSells.CHIPS ?? [])],
+                    DATA: [...(state.mvpOpenSells.DATA ?? [])],
+                  },
+                }
+              : undefined,
+          )
         : assemblePrompt(mandate, state);
 
       // 2. Call LLM

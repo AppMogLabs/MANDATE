@@ -21,10 +21,10 @@ export default function PortfolioPage() {
   const { prices } = useMvpMarket();
   const { remainingMs, finalized, chainReady } = useMvpEpochChain();
   const { savedAt: mandateSavedAt } = useMvpMandate();
-  const { lifecycle } = useMvpAgent();
+  const { agent } = useMvpAgent();
   const needsMandate = !mandateSavedAt;
-  const sitrep = lifecycle.agent.latestSitrep;
-  const status = lifecycle.agent.status;
+  const sitrep = agent.latestSitrep;
+  const status = agent.status;
 
   const resourceValue = RESOURCES.reduce((sum, r) => {
     const bal = balances?.[r] ?? 0;
@@ -87,7 +87,7 @@ export default function PortfolioPage() {
               />
               Agent
             </span>
-            <span>tick #{lifecycle.agent.tickNumber}</span>
+            <span>tick #{agent.tickNumber}</span>
           </div>
           <p className="text-xs font-[family-name:var(--font-terminal)] text-text-secondary leading-snug">
             {sitrep

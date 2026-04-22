@@ -107,6 +107,15 @@ export interface GameState {
   readonly marketPrices: Record<string, number>;
   /** Live ask levels per resource (sell orders on the book) */
   readonly orderBook?: Record<string, readonly OrderLevel[]>;
+  /**
+   * MVP-only: top N cheapest active sell listings per resource, with the
+   * concrete on-chain orderId. Agent uses these to ORDER_BUY.
+   */
+  readonly mvpOpenSells?: Record<string, readonly {
+    orderId: number;
+    price: number;
+    remaining: number;
+  }[]>;
 }
 
 // ── Worker Messages ───────────────────────────────────────────────────────────

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useWriteContract, useReadContract } from 'wagmi';
-import { useQueryClient } from '@tanstack/react-query';
 import { keccak256, toBytes } from 'viem';
 import { useMvpMandate, MVP_MANDATE_MAX } from '@/hooks/useMvpMandate';
 import { useMvpAgent } from '../MvpAgentProvider';
@@ -11,12 +10,6 @@ import { TESTNET_ADDRESSES } from '@/lib/addresses';
 import { mvpEpochAbi } from '@/lib/abis/MvpEpoch';
 
 const MVP_EPOCH = TESTNET_ADDRESSES.contracts.mvpEpoch as `0x${string}`;
-
-type SeedState =
-  | { kind: 'idle' }
-  | { kind: 'seeding' }
-  | { kind: 'seeded'; alreadySeeded: boolean }
-  | { kind: 'error'; message: string };
 
 function formatAgo(ts: number | null): string {
   if (!ts) return 'never';
@@ -30,12 +23,10 @@ function formatAgo(ts: number | null): string {
 
 export default function MandatePage() {
   const { mandate, savedAt, save } = useMvpMandate();
-  const { lifecycle, deploy } = useMvpAgent();
+  const { agent, onboarding, submittedActions, deploy } = useMvpAgent();
   const { walletAddress } = useAuth();
-  const queryClient = useQueryClient();
   const [draft, setDraft] = useState(mandate);
   const [justSaved, setJustSaved] = useState(false);
-  const [seedState, setSeedState] = useState<SeedState>({ kind: 'idle' });
 
   const { data: registered } = useReadContract({
     address: MVP_EPOCH,
@@ -52,61 +43,32 @@ export default function MandatePage() {
 
   const dirty = draft !== mandate;
   const remaining = MVP_MANDATE_MAX - draft.length;
-  const lastSitrep = lifecycle.agent.latestSitrep;
-  const lastAction = lifecycle.submittedActions[lifecycle.submittedActions.length - 1];
+  const lastSitrep = agent.latestSitrep;
+  const lastAction = submittedActions[submittedActions.length - 1];
 
   const handleSave = async () => {
     save(draft);
-    deploy(draft);
     setJustSaved(true);
     setTimeout(() => setJustSaved(false), 1500);
 
-    if (!walletAddress) return;
+    // Deploy runs the full onboarding sequence (register + approvals) if
+    // needed, then sets the mandate and starts the worker. Tracked via
+    // onboarding.status.
+    await deploy(draft);
 
-    // Seed wallet (always try — server is idempotent; handles the case where
-    // the on-chain register() failed previously but tokens are still needed).
-    setSeedState({ kind: 'seeding' });
-    try {
-      const res = await fetch('/api/mvp-seed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ player: walletAddress }),
-      });
-      const data = (await res.json()) as {
-        ok?: boolean;
-        alreadySeeded?: boolean;
-        error?: string;
-      };
-      if (!res.ok || !data.ok) {
-        setSeedState({ kind: 'error', message: data.error ?? 'Seed failed' });
-      } else {
-        setSeedState({ kind: 'seeded', alreadySeeded: !!data.alreadySeeded });
-        // Force a balance refetch so the new tokens appear immediately.
-        void queryClient.invalidateQueries();
-      }
-    } catch (err: unknown) {
-      setSeedState({
-        kind: 'error',
-        message: err instanceof Error ? err.message : 'Network error',
+    // Commit mandate hash on the MVP epoch contract (player signs via Privy).
+    if (walletAddress) {
+      const hash = keccak256(toBytes(draft));
+      writeContract({
+        address: MVP_EPOCH,
+        abi: mvpEpochAbi,
+        functionName: registered ? 'updateMandate' : 'register',
+        args: [hash],
       });
     }
-
-    // Commit mandate hash on-chain. Uses register() for first save, which is
-    // idempotent so it also works as an update.
-    const hash = keccak256(toBytes(draft));
-    writeContract({
-      address: MVP_EPOCH,
-      abi: mvpEpochAbi,
-      functionName: registered ? 'updateMandate' : 'register',
-      args: [hash],
-    });
-
-    // Fire an immediate tick so the user sees a sitrep within seconds instead
-    // of waiting for the next 60s interval.
-    setTimeout(() => lifecycle.agent.tickNow(), 3_000);
   };
 
-  const statusLabel: Record<typeof lifecycle.agent.status, string> = {
+  const statusLabel: Record<typeof agent.status, string> = {
     idle: 'awaiting deployment',
     running: 'running',
     paused: 'paused',
@@ -156,10 +118,15 @@ export default function MandatePage() {
       <button
         type="button"
         onClick={handleSave}
-        disabled={!dirty || committing}
+        disabled={!dirty || committing || (onboarding.status !== 'idle' && onboarding.status !== 'ready' && onboarding.status !== 'error')}
         className="mt-6 w-full py-3 border border-moon-white text-sm tracking-wide uppercase disabled:opacity-30 disabled:cursor-not-allowed hover:bg-moon-white hover:text-night-sky transition-colors"
       >
-        {committing ? 'Committing on-chain…' : justSaved ? 'Deployed' : dirty ? 'Deploy mandate' : 'Mandate active'}
+        {onboarding.status === 'registering' || onboarding.status === 'waiting-confirmation' || onboarding.status === 'approving'
+          ? 'Activating agent…'
+          : committing ? 'Committing on-chain…'
+          : justSaved ? 'Deployed'
+          : dirty ? 'Deploy mandate'
+          : 'Mandate active'}
       </button>
 
       {walletAddress && (
@@ -168,30 +135,23 @@ export default function MandatePage() {
         </p>
       )}
 
-      {seedState.kind !== 'idle' && (
+      {onboarding.status !== 'idle' && onboarding.status !== 'ready' && (
         <div className="mt-3 font-[family-name:var(--font-terminal)] text-[11px]">
-          {seedState.kind === 'seeding' && (
-            <p className="text-text-secondary text-center">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-compute animate-pulse mr-2 align-middle" />
-              Seeding wallet with 10,000 RATE + resources…
-            </p>
-          )}
-          {seedState.kind === 'seeded' && !seedState.alreadySeeded && (
-            <p className="text-status-success text-center">
-              ✓ Wallet seeded — tokens landing in ~10s
-            </p>
-          )}
-          {seedState.kind === 'seeded' && seedState.alreadySeeded && (
-            <p className="text-text-tertiary text-center">
-              Wallet already funded
-            </p>
-          )}
-          {seedState.kind === 'error' && (
-            <p className="text-status-critical text-center">
-              Seed failed: {seedState.message}
-            </p>
-          )}
+          <p className="text-text-secondary text-center">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-compute animate-pulse mr-2 align-middle" />
+            {onboarding.message}
+          </p>
         </div>
+      )}
+      {onboarding.status === 'error' && onboarding.error && (
+        <p className="mt-2 text-[11px] font-[family-name:var(--font-terminal)] text-status-critical text-center">
+          {onboarding.error}
+        </p>
+      )}
+      {onboarding.status === 'ready' && onboarding.isRegistered && (
+        <p className="mt-2 text-[10px] font-[family-name:var(--font-terminal)] text-status-success text-center">
+          ✓ Agent ready — signing from your Privy wallet
+        </p>
       )}
 
       <div className="mt-8 border-t border-border-default/60 pt-4 space-y-4 font-[family-name:var(--font-terminal)]">
@@ -202,15 +162,15 @@ export default function MandatePage() {
           <div className="flex items-center gap-2 text-xs text-moon-white">
             <span
               className={`inline-block w-1.5 h-1.5 rounded-full ${
-                lifecycle.agent.status === 'running'
+                agent.status === 'running'
                   ? 'bg-status-success animate-pulse'
-                  : lifecycle.agent.status === 'error'
+                  : agent.status === 'error'
                     ? 'bg-status-critical'
                     : 'bg-text-tertiary'
               }`}
             />
-            <span>{statusLabel[lifecycle.agent.status]}</span>
-            <span className="text-text-tertiary">· tick #{lifecycle.agent.tickNumber}</span>
+            <span>{statusLabel[agent.status]}</span>
+            <span className="text-text-tertiary">· tick #{agent.tickNumber}</span>
           </div>
         </div>
 
@@ -242,8 +202,8 @@ export default function MandatePage() {
           </div>
         )}
 
-        {lifecycle.agent.error && (
-          <div className="text-xs text-status-critical">{lifecycle.agent.error}</div>
+        {agent.error && (
+          <div className="text-xs text-status-critical">{agent.error}</div>
         )}
       </div>
     </div>
