@@ -25,7 +25,7 @@ const Ctx = createContext<MvpAgentContext | null>(null);
  */
 export function MvpAgentProvider({ children }: { children: ReactNode }) {
   const { walletAddress } = useAuth();
-  const lifecycle = useAgentLifecycle(walletAddress ?? '');
+  const lifecycle = useAgentLifecycle(walletAddress ?? '', { promptVariant: 'mvp' });
   const configuredRef = useRef(false);
 
   const { balances, rateBalance } = useResourceBalances(

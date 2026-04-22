@@ -52,17 +52,29 @@ export default function MandatePage() {
     setJustSaved(true);
     setTimeout(() => setJustSaved(false), 1500);
 
-    // Commit mandate hash on-chain. Uses register() for first save, which is
-    // idempotent so it also works as an update; writeContract handles both.
-    if (walletAddress) {
-      const hash = keccak256(toBytes(draft));
-      writeContract({
-        address: MVP_EPOCH,
-        abi: mvpEpochAbi,
-        functionName: registered ? 'updateMandate' : 'register',
-        args: [hash],
+    if (!walletAddress) return;
+
+    // First-save: seed the player wallet with starting RATE + resources so the
+    // agent has capital to trade with. Idempotent server-side.
+    if (!registered) {
+      void fetch('/api/mvp-seed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player: walletAddress }),
+      }).catch(() => {
+        /* non-fatal; player can retry by saving again */
       });
     }
+
+    // Commit mandate hash on-chain. Uses register() for first save, which is
+    // idempotent so it also works as an update; writeContract handles both.
+    const hash = keccak256(toBytes(draft));
+    writeContract({
+      address: MVP_EPOCH,
+      abi: mvpEpochAbi,
+      functionName: registered ? 'updateMandate' : 'register',
+      args: [hash],
+    });
   };
 
   const statusLabel: Record<typeof lifecycle.agent.status, string> = {

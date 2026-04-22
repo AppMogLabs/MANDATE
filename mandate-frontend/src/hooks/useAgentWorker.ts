@@ -10,6 +10,7 @@ import type {
   ProposedAction,
 } from '@/agent/types';
 import { assemblePrompt } from '@/agent/prompts';
+import { assembleMvpPrompt } from '@/agent/mvp-prompts';
 import { callLLMProxy } from '@/agent/llm-proxy';
 import { parseLLMResponse } from '@/agent/parse-response';
 import { guardValidate } from '@/agent/guard';
@@ -76,8 +77,10 @@ export function useAgentWorker(
     };
 
     try {
-      // 1. Assemble prompt
-      const prompt = assemblePrompt(mandate, state);
+      // 1. Assemble prompt (MVP variant trims production/building concepts)
+      const prompt = config.promptVariant === 'mvp'
+        ? assembleMvpPrompt(mandate, state)
+        : assemblePrompt(mandate, state);
 
       // 2. Call LLM
       const llmResult = await callLLMProxy(prompt, config);

@@ -32,7 +32,10 @@ interface SubmittedAction {
  * 4. Agent worker starts ticking
  * 5. Approved actions are submitted on-chain via /api/agent-action
  */
-export function useAgentLifecycle(walletAddress: string): AgentLifecycleState {
+export function useAgentLifecycle(
+  walletAddress: string,
+  opts: { promptVariant?: 'full' | 'mvp' } = {},
+): AgentLifecycleState {
   const [llmConfig, setLlmConfig] = useState<LLMConfig | null>(null);
   const [mandateDeployed, setMandateDeployed] = useState(false);
   const [submittedActions, setSubmittedActions] = useState<readonly SubmittedAction[]>([]);
@@ -99,11 +102,12 @@ export function useAgentLifecycle(walletAddress: string): AgentLifecycleState {
       tickIntervalMs: config.tier === 'free' ? 60_000 : 30_000,
       playerAddress: walletAddress,
       agentId: 0,
+      promptVariant: opts.promptVariant ?? 'full',
     };
     agent.setConfig(agentConfig);
 
     setLlmConfig(config);
-  }, [walletAddress, agent]);
+  }, [walletAddress, agent, opts.promptVariant]);
 
   const deployMandate = useCallback((
     mandateText: string,

@@ -140,4 +140,9 @@ export interface AgentConfig {
   readonly tickIntervalMs: number; // default 30000
   readonly playerAddress: string;
   readonly agentId: number;
+  /**
+   * Which prompt assembler to use. 'mvp' restricts the agent to trading only
+   * (no buildings / production). Default is the full-game assembler.
+   */
+  readonly promptVariant?: 'full' | 'mvp';
 }
