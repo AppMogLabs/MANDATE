@@ -8,6 +8,7 @@ import { ResourceRow } from '@/components/mvp/ResourceRow';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useMvpMandate } from '@/hooks/useMvpMandate';
+import { useMvpAgent } from './MvpAgentProvider';
 import type { MvpResource } from '@/hooks/useMvpEvents';
 
 const RESOURCES: readonly MvpResource[] = ['COMPUTE', 'CHIPS', 'DATA'];
@@ -20,7 +21,10 @@ export default function PortfolioPage() {
   const { prices } = useMvpMarket();
   const { remainingMs, finalized, chainReady } = useMvpEpochChain();
   const { savedAt: mandateSavedAt } = useMvpMandate();
+  const { lifecycle } = useMvpAgent();
   const needsMandate = !mandateSavedAt;
+  const sitrep = lifecycle.agent.latestSitrep;
+  const status = lifecycle.agent.status;
 
   const resourceValue = RESOURCES.reduce((sum, r) => {
     const bal = balances?.[r] ?? 0;
@@ -68,6 +72,31 @@ export default function PortfolioPage() {
         </div>
       </div>
 
+      {!needsMandate && (sitrep || status === 'running') && (
+        <div className="mt-8 border-t border-border-default/60 pt-4">
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.15em] text-text-tertiary font-[family-name:var(--font-terminal)] mb-2">
+            <span className="flex items-center gap-2">
+              <span
+                className={`inline-block w-1.5 h-1.5 rounded-full ${
+                  status === 'running'
+                    ? 'bg-status-success animate-pulse'
+                    : status === 'error'
+                      ? 'bg-status-critical'
+                      : 'bg-text-tertiary'
+                }`}
+              />
+              Agent
+            </span>
+            <span>tick #{lifecycle.agent.tickNumber}</span>
+          </div>
+          <p className="text-xs font-[family-name:var(--font-terminal)] text-text-secondary leading-snug">
+            {sitrep
+              ? sitrep.summary
+              : 'Running. First sitrep landing shortly…'}
+          </p>
+        </div>
+      )}
+
       {needsMandate ? (
         <Link
           href="/mvp/mandate"
@@ -78,7 +107,7 @@ export default function PortfolioPage() {
       ) : (
         <Link
           href="/mvp/mandate"
-          className="mt-8 block w-full text-center py-3 border border-border-default rounded hover:bg-surface-1 text-sm transition-colors"
+          className="mt-6 block w-full text-center py-3 border border-border-default rounded hover:bg-surface-1 text-sm transition-colors"
         >
           Edit mandate →
         </Link>

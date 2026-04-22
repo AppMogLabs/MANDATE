@@ -77,6 +77,9 @@ export function MvpAgentProvider({ children }: { children: ReactNode }) {
       lifecycle,
       deploy: (mandateText: string) => {
         lifecycle.deployMandate(mandateText, 5, 'COMPUTE');
+        // Trigger the first tick within ~3s so the player sees a sitrep
+        // immediately rather than waiting for the next 60s interval.
+        setTimeout(() => lifecycle.agent.tickNow(), 3_000);
       },
     }),
     [lifecycle],

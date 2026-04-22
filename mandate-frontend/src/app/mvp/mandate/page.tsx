@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useWriteContract, useReadContract } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
 import { keccak256, toBytes } from 'viem';
 import { useMvpMandate, MVP_MANDATE_MAX } from '@/hooks/useMvpMandate';
 import { useMvpAgent } from '../MvpAgentProvider';
@@ -10,6 +11,12 @@ import { TESTNET_ADDRESSES } from '@/lib/addresses';
 import { mvpEpochAbi } from '@/lib/abis/MvpEpoch';
 
 const MVP_EPOCH = TESTNET_ADDRESSES.contracts.mvpEpoch as `0x${string}`;
+
+type SeedState =
+  | { kind: 'idle' }
+  | { kind: 'seeding' }
+  | { kind: 'seeded'; alreadySeeded: boolean }
+  | { kind: 'error'; message: string };
 
 function formatAgo(ts: number | null): string {
   if (!ts) return 'never';
@@ -25,8 +32,10 @@ export default function MandatePage() {
   const { mandate, savedAt, save } = useMvpMandate();
   const { lifecycle, deploy } = useMvpAgent();
   const { walletAddress } = useAuth();
+  const queryClient = useQueryClient();
   const [draft, setDraft] = useState(mandate);
   const [justSaved, setJustSaved] = useState(false);
+  const [seedState, setSeedState] = useState<SeedState>({ kind: 'idle' });
 
   const { data: registered } = useReadContract({
     address: MVP_EPOCH,
@@ -46,7 +55,7 @@ export default function MandatePage() {
   const lastSitrep = lifecycle.agent.latestSitrep;
   const lastAction = lifecycle.submittedActions[lifecycle.submittedActions.length - 1];
 
-  const handleSave = () => {
+  const handleSave = async () => {
     save(draft);
     deploy(draft);
     setJustSaved(true);
@@ -54,20 +63,36 @@ export default function MandatePage() {
 
     if (!walletAddress) return;
 
-    // First-save: seed the player wallet with starting RATE + resources so the
-    // agent has capital to trade with. Idempotent server-side.
-    if (!registered) {
-      void fetch('/api/mvp-seed', {
+    // Seed wallet (always try — server is idempotent; handles the case where
+    // the on-chain register() failed previously but tokens are still needed).
+    setSeedState({ kind: 'seeding' });
+    try {
+      const res = await fetch('/api/mvp-seed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ player: walletAddress }),
-      }).catch(() => {
-        /* non-fatal; player can retry by saving again */
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        alreadySeeded?: boolean;
+        error?: string;
+      };
+      if (!res.ok || !data.ok) {
+        setSeedState({ kind: 'error', message: data.error ?? 'Seed failed' });
+      } else {
+        setSeedState({ kind: 'seeded', alreadySeeded: !!data.alreadySeeded });
+        // Force a balance refetch so the new tokens appear immediately.
+        void queryClient.invalidateQueries();
+      }
+    } catch (err: unknown) {
+      setSeedState({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Network error',
       });
     }
 
     // Commit mandate hash on-chain. Uses register() for first save, which is
-    // idempotent so it also works as an update; writeContract handles both.
+    // idempotent so it also works as an update.
     const hash = keccak256(toBytes(draft));
     writeContract({
       address: MVP_EPOCH,
@@ -75,6 +100,10 @@ export default function MandatePage() {
       functionName: registered ? 'updateMandate' : 'register',
       args: [hash],
     });
+
+    // Fire an immediate tick so the user sees a sitrep within seconds instead
+    // of waiting for the next 60s interval.
+    setTimeout(() => lifecycle.agent.tickNow(), 3_000);
   };
 
   const statusLabel: Record<typeof lifecycle.agent.status, string> = {
@@ -137,6 +166,32 @@ export default function MandatePage() {
         <p className="mt-2 text-[10px] font-[family-name:var(--font-terminal)] text-text-tertiary text-center">
           {registered ? 'REGISTERED ON-CHAIN' : 'Saving will register you for the epoch'}
         </p>
+      )}
+
+      {seedState.kind !== 'idle' && (
+        <div className="mt-3 font-[family-name:var(--font-terminal)] text-[11px]">
+          {seedState.kind === 'seeding' && (
+            <p className="text-text-secondary text-center">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-compute animate-pulse mr-2 align-middle" />
+              Seeding wallet with 10,000 RATE + resources…
+            </p>
+          )}
+          {seedState.kind === 'seeded' && !seedState.alreadySeeded && (
+            <p className="text-status-success text-center">
+              ✓ Wallet seeded — tokens landing in ~10s
+            </p>
+          )}
+          {seedState.kind === 'seeded' && seedState.alreadySeeded && (
+            <p className="text-text-tertiary text-center">
+              Wallet already funded
+            </p>
+          )}
+          {seedState.kind === 'error' && (
+            <p className="text-status-critical text-center">
+              Seed failed: {seedState.message}
+            </p>
+          )}
+        </div>
       )}
 
       <div className="mt-8 border-t border-border-default/60 pt-4 space-y-4 font-[family-name:var(--font-terminal)]">
