@@ -7,6 +7,7 @@ import { formatRemaining } from '@/hooks/useMvpEpoch';
 import { ResourceRow } from '@/components/mvp/ResourceRow';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { useMvpMandate } from '@/hooks/useMvpMandate';
 import type { MvpResource } from '@/hooks/useMvpEvents';
 
 const RESOURCES: readonly MvpResource[] = ['COMPUTE', 'CHIPS', 'DATA'];
@@ -18,6 +19,8 @@ export default function PortfolioPage() {
   );
   const { prices } = useMvpMarket();
   const { remainingMs, finalized, chainReady } = useMvpEpochChain();
+  const { savedAt: mandateSavedAt } = useMvpMandate();
+  const needsMandate = !mandateSavedAt;
 
   const resourceValue = RESOURCES.reduce((sum, r) => {
     const bal = balances?.[r] ?? 0;
@@ -65,16 +68,25 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      <Link
-        href="/mvp/mandate"
-        className="mt-8 block w-full text-center py-3 border border-border-default rounded hover:bg-surface-1 text-sm transition-colors"
-      >
-        Edit mandate →
-      </Link>
+      {needsMandate ? (
+        <Link
+          href="/mvp/mandate"
+          className="mt-8 block w-full text-center py-3.5 bg-moon-white text-night-sky text-sm uppercase tracking-wide hover:opacity-90 transition-opacity"
+        >
+          Deploy your first mandate →
+        </Link>
+      ) : (
+        <Link
+          href="/mvp/mandate"
+          className="mt-8 block w-full text-center py-3 border border-border-default rounded hover:bg-surface-1 text-sm transition-colors"
+        >
+          Edit mandate →
+        </Link>
+      )}
 
-      {!walletAddress && (
-        <p className="mt-4 text-xs text-text-tertiary text-center">
-          Wallet not connected. Showing default player balances.
+      {needsMandate && (
+        <p className="mt-3 text-[11px] text-text-tertiary text-center leading-relaxed">
+          Your agent starts trading when you deploy a mandate.
         </p>
       )}
     </div>

@@ -86,6 +86,17 @@ export default function MandatePage() {
         reads market prices and your holdings every tick and decides what to do.
       </p>
 
+      {!savedAt && (
+        <div className="mt-4 p-3 border border-compute/40 bg-compute/5 rounded text-xs text-text-secondary leading-relaxed">
+          <div className="text-compute text-[10px] uppercase tracking-wide mb-1 font-[family-name:var(--font-terminal)]">
+            Getting started
+          </div>
+          Write what you want your agent to do. The more specific, the better.
+          Example: &quot;Accumulate CHIPS when prices are below 2.0 RATE. Never
+          sell COMPUTE. React fast to world events.&quot;
+        </div>
+      )}
+
       <textarea
         value={draft}
         onChange={(e) => setDraft(e.target.value.slice(0, MVP_MANDATE_MAX))}
@@ -121,9 +132,18 @@ export default function MandatePage() {
           <div className="text-[10px] uppercase tracking-[0.15em] text-text-tertiary mb-1">
             Agent status
           </div>
-          <div className="text-xs text-moon-white">
-            {statusLabel[lifecycle.agent.status]}
-            <span className="text-text-tertiary ml-2">· tick #{lifecycle.agent.tickNumber}</span>
+          <div className="flex items-center gap-2 text-xs text-moon-white">
+            <span
+              className={`inline-block w-1.5 h-1.5 rounded-full ${
+                lifecycle.agent.status === 'running'
+                  ? 'bg-status-success animate-pulse'
+                  : lifecycle.agent.status === 'error'
+                    ? 'bg-status-critical'
+                    : 'bg-text-tertiary'
+              }`}
+            />
+            <span>{statusLabel[lifecycle.agent.status]}</span>
+            <span className="text-text-tertiary">· tick #{lifecycle.agent.tickNumber}</span>
           </div>
         </div>
 
